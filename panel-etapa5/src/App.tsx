@@ -1,0 +1,161 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { Alerta, Indicadores } from './components/Etapa5Monitor';
+import { Cola, Latencia, Mezcla, Pulso, Revision, Senales, type Metricas } from './components/Consola';
+import { PruebaTransacciones } from './components/PruebaTransacciones';
+
+async function leer<T>(ruta: string, signal: AbortSignal): Promise<T> {
+  const res = await fetch(ruta, { signal, cache: 'no-store' });
+  if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
+  return res.json();
+}
+
+// Una consulta en curso no se cancela por el siguiente ciclo: si cada consulta tardara más de 2 s,
+// cancelarla dejaría el panel congelado sin error. Solo se descarta al desmontar.
+function useDatosGo<T>(ruta: string, revision: number) {
+  const [estado, setEstado] = useState<{ datos?: T; error?: string; en?: number }>({});
+  const enCurso = useRef(false);
+  const montado = useRef(true);
+  useEffect(() => () => { montado.current = false; }, []);
+  useEffect(() => {
+    if (enCurso.current) return;
+    enCurso.current = true;
+    leer<T>(ruta, AbortSignal.timeout(8000)).then(
+      (datos) => { if (montado.current) setEstado({ datos, en: Date.now() }); },
+      (error: Error) => { if (montado.current) setEstado((e) => ({ ...e, error: error.message })); },
+    ).finally(() => { enCurso.current = false; });
+  }, [ruta, revision]);
+  return estado;
+}
+
+function leerPreferencia<T extends string>(clave: string, opciones: readonly T[], porDefecto: T): T {
+  try {
+    const v = localStorage.getItem(clave) as T | null;
+    return v && opciones.includes(v) ? v : porDefecto;
+  } catch { return porDefecto; }
+}
+
+const ESTADO = {
+  OPTIMO: ['Óptimo', 'var(--ok)'], DEGRADADO: ['Degradado', 'var(--alerta)'], CRITICO: ['Crítico', 'var(--retener)'],
+} as const;
+const ORIGENES = { todas: 'Todas', billetera: 'Billetera', sandbox: 'Sandbox' } as const;
+const ORDEN = { riesgo: 'Mayor riesgo', recientes: 'Más recientes' } as const;
+const VISTA = { casos: 'Casos', actividad: 'Toda la actividad' } as const;
+
+export default function App() {
+  const [revision, setRevision] = useState(0);
+  const [enVivo, setEnVivo] = useState(true);
+  const [origen, setOrigen] = useState<keyof typeof ORIGENES>('todas');
+  const [orden, setOrden] = useState<keyof typeof ORDEN>('recientes');
+  // Por defecto, toda la actividad: un envío aprobado de la billetera no aparece en «Casos».
+  const [vista, setVistaEstado] = useState<keyof typeof VISTA>(() => leerPreferencia('aegix.vista', ['casos', 'actividad'] as const, 'actividad'));
+  const setVista = (v: keyof typeof VISTA) => { setVistaEstado(v); try { localStorage.setItem('aegix.vista', v); } catch { /* sin almacenamiento */ } };
+  const { datos: indicadores } = useDatosGo<Indicadores>('/api/indicadores', revision);
+  const { datos: alertas, error } = useDatosGo<Alerta[]>('/api/alertas', revision);
+  const { datos: metricas, error: errorMetricas, en: actualizado } = useDatosGo<Metricas>('/api/metricas', revision);
+  const { datos: actividad } = useDatosGo<Alerta[]>('/api/decisiones', revision);
+
+  // Consulta a aegix cada 2 s: las operaciones de la billetera aparecen sin recargar.
+  useEffect(() => {
+    if (!enVivo) return;
+    const id = setInterval(() => setRevision((v) => v + 1), 2000);
+    // Al volver a la pestaña se consulta de inmediato: el navegador frena los temporizadores de pestañas ocultas.
+    const alVolver = () => { if (document.visibilityState === 'visible') setRevision((v) => v + 1); };
+    document.addEventListener('visibilitychange', alVolver);
+    window.addEventListener('focus', alVolver);
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', alVolver); window.removeEventListener('focus', alVolver); };
+  }, [enVivo]);
+  const segundosDesde = actualizado ? Math.max(0, Math.round((Date.now() - actualizado) / 1000)) : null;
+  const atrasado = enVivo && segundosDesde !== null && segundosDesde > 8;
+
+  // Últimas 60 muestras (2 min) para las líneas del pulso; solo viven mientras el panel está abierto.
+  const [historial, setHistorial] = useState<Metricas[]>([]);
+  useEffect(() => { if (metricas) setHistorial((h) => [...h.slice(-59), metricas]); }, [metricas]);
+
+  // Resalta los casos que no estaban en la consulta anterior.
+  const vistas = useRef<Set<string> | null>(null);
+  const nuevas = useMemo(() => {
+    const claves = new Set((alertas ?? []).map((a) => `${a.referencia}-${a.registrado_en}`));
+    const previas = vistas.current;
+    vistas.current = claves;
+    return previas ? new Set([...claves].filter((c) => !previas.has(c))) : new Set<string>();
+  }, [alertas]);
+
+  const fuente = vista === 'actividad' ? actividad : alertas;
+  const visibles = useMemo(() => {
+    const lista = (fuente ?? []).filter((a) => origen === 'todas' || (a.origen ?? 'sandbox') === origen);
+    return orden === 'recientes'
+      ? [...lista].sort((a, b) => b.registrado_en.localeCompare(a.registrado_en))
+      : lista; // aegix ya las entrega ordenadas por puntaje
+  }, [fuente, origen, orden]);
+
+  const pendientes = (alertas ?? []).filter((a) => a.decision === 'retener' && !a.resolucion).length;
+  const sinConexion = !!(error && errorMetricas);
+  const [estadoTexto, estadoColor] = sinConexion ? ['Sin conexión con aegix', 'var(--retener)'] : metricas ? ESTADO[metricas.estado] : ['Conectando', 'var(--suave)'];
+
+  return (
+    <>
+      <header className="cabecera">
+        <div className="marca">
+          <svg viewBox="0 0 32 32" aria-hidden="true">
+            <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" strokeWidth="3" strokeDasharray="57 82" transform="rotate(135 16 16)" />
+            <circle cx="16" cy="16" r="4" fill="currentColor" />
+          </svg>
+          <b>aegix</b><span>Decisiones de Yuma Pay</span>
+        </div>
+        <div className="cabecera-der">
+          <span className="etiqueta estado-sistema" style={{ ['--c' as string]: estadoColor }}>{estadoTexto}</span>
+          {alertas?.[0] && <span className="etiqueta mono">{alertas[0].version_reglas}</span>}
+          <span className={`actualizado${atrasado || errorMetricas ? ' atrasado' : ''}`} role="status">
+            {errorMetricas && atrasado ? `Sin respuesta de aegix: ${errorMetricas}`
+              : segundosDesde === null ? 'Conectando…'
+              : segundosDesde < 3 ? 'Actualizado ahora' : `Actualizado hace ${segundosDesde} s`}
+          </span>
+          <button type="button" className="boton-vivo" aria-pressed={enVivo} onClick={() => setEnVivo((v) => !v)}>
+            <i aria-hidden="true" />{enVivo ? 'En vivo' : 'Pausado'}
+          </button>
+        </div>
+      </header>
+
+      <main className="contenido">
+        <Pulso m={metricas} ind={indicadores} historial={historial} />
+        {sinConexion && <p className="aviso" role="alert">No se pudo leer aegix ({error}). Revisa que el intermediario esté corriendo en 127.0.0.1:8081.</p>}
+
+        <div className="cuerpo">
+          <section className="panel" aria-labelledby="t-cola">
+            <div className="panel-cabeza">
+              <div className="segmentado" role="group" aria-label="Qué mostrar">
+                {Object.entries(VISTA).map(([k, t]) => (
+                  <button key={k} type="button" aria-pressed={vista === k} onClick={() => setVista(k as keyof typeof VISTA)}>{t}</button>
+                ))}
+              </div>
+              <h2 id="t-cola" className="sr-only">{vista === 'casos' ? 'Cola del analista' : 'Toda la actividad'}</h2>
+              <span className="conteo"><span className="mono">{visibles.length}</span> {vista === 'casos' ? 'casos' : 'decisiones recientes'}, <span className="mono">{pendientes}</span> por resolver</span>
+              <div className="controles">
+                <div className="segmentado" role="group" aria-label="Origen">
+                  {Object.entries(ORIGENES).map(([k, t]) => (
+                    <button key={k} type="button" aria-pressed={origen === k} onClick={() => setOrigen(k as keyof typeof ORIGENES)}>{t}</button>
+                  ))}
+                </div>
+                <div className="segmentado" role="group" aria-label="Orden">
+                  {Object.entries(ORDEN).map(([k, t]) => (
+                    <button key={k} type="button" aria-pressed={orden === k} onClick={() => setOrden(k as keyof typeof ORDEN)}>{t}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            {fuente ? <Cola alertas={visibles} ahora={Date.now()} nuevas={nuevas} alResolver={() => setRevision((v) => v + 1)} /> : <p className="vacio" role="status">Cargando casos…</p>}
+          </section>
+
+          <aside className="costado" aria-label="Contexto">
+            <Revision ind={indicadores} pendientes={pendientes} />
+            <Mezcla porOrigen={metricas?.decisiones_por_origen} />
+            <Senales modalidades={metricas?.modalidades_detectadas} />
+            <Latencia cubetas={metricas?.histograma_latencia_ms} sla={metricas?.sla_maximo_ms ?? 300} />
+          </aside>
+        </div>
+
+        <PruebaTransacciones alTerminar={() => setRevision((v) => v + 1)} />
+      </main>
+    </>
+  );
+}

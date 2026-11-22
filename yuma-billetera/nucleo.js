@@ -1,0 +1,115 @@
+// Lógica pura de la billetera: arma la solicitud que aegix espera en /v1/autorizar.
+// Se usa desde el navegador (app.js) y desde las pruebas (node --test).
+
+export const VERSION_APP = '3.4.1';
+
+// Tipos de operación de la billetera → esquema del sandbox Yuma Pay.
+export const OPERACIONES = {
+  enviar_yuma: { tipo: 'transferencia_inmediata', destino: 'cuenta_yuma', titulo: 'Enviar a Yuma' },
+  enviar_banco: { tipo: 'transferencia_inmediata', destino: 'otra_entidad', titulo: 'Enviar a otro banco' },
+  pagar_qr: { tipo: 'pago_qr', destino: 'comercio', titulo: 'Pagar con QR' },
+  recargar: { tipo: 'recarga_celular', destino: 'operador', titulo: 'Recargar celular' },
+  servicios: { tipo: 'pago_servicios', destino: 'servicio', titulo: 'Pagar servicios' },
+};
+
+// Colombia usa UTC-5 todo el año; aegix exige AAAA-MM-DD HH:MM:SS en hora de Colombia.
+export function fechaColombia(fecha = new Date()) {
+  return new Date(fecha.getTime() - 5 * 3600e3).toISOString().slice(0, 19).replace('T', ' ');
+}
+
+export function sistemaOperativo(agente = '') {
+  if (/android/i.test(agente)) return 'Android';
+  if (/iphone|ipad|ios/i.test(agente)) return 'iOS';
+  if (/windows/i.test(agente)) return 'Windows';
+  if (/mac os/i.test(agente)) return 'macOS';
+  if (/linux/i.test(agente)) return 'Linux';
+  return 'Web';
+}
+
+export function limpiarDestino(texto) {
+  return String(texto ?? '').trim().replace(/[\s.]+/g, '').toUpperCase().slice(0, 64);
+}
+
+// Convenios de pago de servicios registrados en Yuma (ficticios).
+export const CONVENIOS = [
+  { id: 'SRV-EPM', nombre: 'EPM energía' },
+  { id: 'SRV-ACB', nombre: 'Acueducto Bogotá' },
+  { id: 'SRV-GAS', nombre: 'Gases del Caribe' },
+  { id: 'SRV-NET', nombre: 'Internet Fibra' },
+];
+
+const CELULAR = [/^3\d{9}$/, 'Escribe un celular de 10 dígitos que empiece por 3.'];
+const FORMATOS = {
+  enviar_yuma: CELULAR,
+  recargar: CELULAR,
+  enviar_banco: [/^\d{6,20}$/, 'Escribe un número de cuenta de 6 a 20 dígitos.'],
+  pagar_qr: [/^COM\d{4}$/, 'El código del comercio tiene la forma COM0380.'],
+  servicios: [new RegExp(`^(${CONVENIOS.map((c) => c.id).join('|')})$`), 'Elige un convenio de la lista.'],
+};
+
+// Devuelve el mensaje de error, o '' si el destino es válido para esa operación.
+export function validarDestino(clave, destino, celularPropio) {
+  const [formato, mensaje] = FORMATOS[clave];
+  if (!destino) return 'Falta el destino.';
+  if (!formato.test(destino)) return mensaje;
+  if (clave === 'enviar_yuma' && destino === celularPropio) return 'No puedes enviarte plata a ti mismo.';
+  return '';
+}
+
+/**
+ * @param usuario   perfil del cliente de demostración
+ * @param op        { clave: keyof OPERACIONES, destino, monto }
+ * @param senales   interruptores del simulador de riesgo
+ * @param entorno   { id, dispositivo, agente, ahora }
+ */
+export function construirSolicitud(usuario, op, senales, entorno) {
+  const tipo = OPERACIONES[op.clave];
+  if (!tipo) throw new Error('operación desconocida');
+  const destino = limpiarDestino(op.destino);
+  const invalido = validarDestino(op.clave, destino, usuario.celular);
+  if (invalido) throw new Error(invalido);
+  if (!Number.isInteger(op.monto) || op.monto <= 0) throw new Error('Escribe un monto mayor que cero.');
+  if (op.monto > usuario.saldo) throw new Error('Saldo insuficiente.');
+
+  const conocido = usuario.contactos.some((c) => c.id === destino) ||
+    usuario.movimientos.some((m) => m.destino === destino && ['completada', 'verificada', 'liberada'].includes(m.estado));
+  // Un dispositivo nuevo se simula con otra huella además de la marca.
+  const dispositivo = senales.dispositivoNuevo ? `${entorno.dispositivo}-N` : entorno.dispositivo;
+  const contexto = {
+    es_tor: !!senales.tor,
+    es_proxy_o_datacenter: !!senales.proxy,
+    version_app: VERSION_APP,
+    sistema_operativo: sistemaOperativo(entorno.agente),
+    huella_dispositivo: dispositivo,
+  };
+  // Sin simulación, la función del servidor completa IP y país reales de la conexión.
+  if (senales.exterior) contexto.pais_ip = 'US';
+
+  return {
+    transaccion: {
+      id_transaccion: entorno.id,
+      fecha_hora: fechaColombia(entorno.ahora),
+      id_cliente: `YUMA-${usuario.celular}`,
+      tipo_operacion: tipo.tipo,
+      canal: 'app',
+      monto_cop: op.monto,
+      saldo_antes_cop: usuario.saldo,
+      id_destino: destino,
+      tipo_destino: tipo.destino,
+      destino_nuevo: conocido ? 0 : 1,
+      id_dispositivo: dispositivo,
+      dispositivo_nuevo: senales.dispositivoNuevo ? 1 : 0,
+      cambio_clave_24h: senales.cambioClave ? 1 : 0,
+      cambio_sim_48h: senales.cambioSIM ? 1 : 0,
+      departamento_ip: usuario.departamento,
+      ip_departamento_distinto: senales.exterior ? 1 : 0,
+      antiguedad_cuenta_dias: usuario.antiguedad,
+    },
+    contexto,
+  };
+}
+
+// Estado del movimiento según la decisión de aegix (desafiar se resuelve después con el código).
+export function estadoPorDecision(accion) {
+  return { aprobar: 'completada', desafiar: 'desafio', retener: 'retenida', rechazar: 'rechazada' }[accion] ?? 'error';
+}

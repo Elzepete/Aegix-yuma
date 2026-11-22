@@ -1,0 +1,8 @@
+{
+  "name": "Remix Escudo Yuma — Sistema Antifraude y Centinela",
+  "description": "Plataforma antifraude en tiempo real (\u003c300 ms) para Yuma Pay combinando Go para concurrencia e integridad SHA-256 y Python para scoring ML explicable.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

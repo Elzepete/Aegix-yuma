@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Yuma · Billetera</title>
+  <meta name="description" content="Billetera de demostración de Yuma Pay (ficticia) protegida por aegix.">
+  <meta name="theme-color" content="#0B3B2E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230B3B2E'/%3E%3Cpath d='M18 18l14 16 14-16M32 34v14' stroke='%23FFB627' stroke-width='7' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/estilos.css">
+</head>
+<body>
+  <div class="franja" role="note">Simulación para hackatón · Yuma Pay es ficticia. No escribas datos reales.</div>
+  <main class="app" id="app" aria-live="polite"></main>
+  <div class="sms" id="sms" role="status" hidden></div>
+  <dialog class="hoja" id="detalle" aria-labelledby="detalle-titulo"></dialog>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

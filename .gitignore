@@ -1,0 +1,31 @@
+# Dependencias y compilados
+node_modules
+dist/
+build/
+coverage/
+.vercel/
+/bin/
+
+# Datos de ejecución: auditoría, claves HMAC y evidencias. Nunca se suben.
+*.jsonl
+*.clave
+.clave*
+archivo-auditoria/
+demo-forense.*/
+*.log
+
+# Secretos locales
+.env*
+!.env.example
+
+# Material de los organizadores del reto (caso, datos, generador): no es nuestro para publicarlo
+public/assets/aistudio/
+**/assets/aistudio/
+caso/
+03_Datos/
+00_Organizadores/
+
+# Herramientas locales del editor
+.claude/
+.impeccable/
+.DS_Store
