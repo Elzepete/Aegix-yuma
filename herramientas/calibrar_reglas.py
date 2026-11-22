@@ -8,11 +8,28 @@ para validar. Falsos positivos aquí = legítimas retenidas / retenidas (más es
 que divide entre todo lo detectado, incluidos los desafíos).
 
     python3 herramientas/calibrar_reglas.py ruta/03_Datos/transacciones.csv [fricción_máx=0.03]
+        [--auditoria=datos/decisiones.jsonl] [--peso-analista=10]
+
+Con --auditoria, las retenciones que el analista resolvió en la consola (liberar = legítima, confirmar fraude =
+fraude) se suman al entrenamiento; cada una vale --peso-analista transacciones del CSV.
 """
-import csv, sys, itertools, collections
+import csv, sys, os, itertools, collections
 from datetime import datetime, timedelta
 
-filas = list(csv.DictReader(open(sys.argv[1], encoding='utf-8-sig')))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from etiquetas_analista import etiquetas
+
+opciones = dict(a[2:].split('=', 1) for a in sys.argv[1:] if a.startswith('--') and '=' in a)
+args = [a for a in sys.argv[1:] if not a.startswith('--')]
+ANALISTA = etiquetas(opciones['auditoria'], os.path.join(os.path.dirname(__file__), '..', 'config', 'reglas.yaml')) if 'auditoria' in opciones else []
+PESO_ANALISTA = int(opciones.get('peso-analista', 10))
+if 'auditoria' in opciones:
+    fuera = sum(bool(s & {'tor', 'proxy', 'pais_nuevo'}) for s, _ in ANALISTA)
+    print(f"etiquetas del analista: {len(ANALISTA)} ({sum(f for _, f in ANALISTA)} fraude, "
+          f"{sum(not f for _, f in ANALISTA)} legítimas), cada una × {PESO_ANALISTA}; "
+          f"{fuera} traen tor/proxy/país, que no se calibran (criterio experto)")
+
+filas = list(csv.DictReader(open(args[0], encoding='utf-8-sig')))
 hist = collections.defaultdict(list)   # cliente -> [(fecha, monto)] en orden
 crudos = []
 for f in filas:  # el CSV ya viene en orden cronológico (como el cursor del sandbox)
@@ -42,6 +59,10 @@ def patrones(dias, u_mss, u_msp, u_sal, cuales):
         if c['tr'] != cuales: continue
         clave = tuple(c[b] for b in BOOL) + (c['antig'] < dias, c['mss'] >= u_mss, c['msp'] >= u_msp, c['sal'] >= u_sal)
         a = agg[clave]; a[0] += not c['fraude']; a[1] += c['fraude']; a[2] += c['monto']*c['fraude']
+    if cuales:  # solo entrenamiento: la validación sigue siendo el CSV intacto
+        for senales, fraude in ANALISTA:
+            clave = tuple(n in senales for n in NOMBRES)
+            a = agg[clave]; a[0] += PESO_ANALISTA * (not fraude); a[1] += PESO_ANALISTA * fraude
     return list(agg.items())
 
 NOMBRES = BOOL + ['cuenta_nueva','monto_sobre_saldo','monto_sobre_percentil','salidas_recientes']
@@ -84,7 +105,7 @@ def calibrar(pats, friccion_max):
 fmt = lambda m: ' '.join(f"{k}={v:.3f}" if isinstance(v,float) else f"{k}={v}" for k,v in m.items())
 previas = ([.15, .25, .15, .10, 1e-9, .10, 0, .20, .20, .20], .35, .70)  # reglas etapa-5.1, sin las señales nuevas
 print('etapa-5.1 validación:', fmt(evaluar(patrones(1, .85, 1.25, 3, False), *previas)))
-for friccion in [float(sys.argv[2]) if len(sys.argv) > 2 else .03]:
+for friccion in [float(args[1]) if len(args) > 1 else .03]:
     res = []
     for dias, umss, umsp, usal in itertools.product([30, 60, 90], [.6, .75, .85], [1.25, 2, 3], [2, 3, 5]):
         o, w, ud, ur = calibrar(patrones(dias, umss, umsp, usal, True), friccion)

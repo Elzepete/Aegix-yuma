@@ -44,3 +44,25 @@ func TestCuentaNuevaExigeDias(t *testing.T) {
 		t.Fatalf("se esperaba error por dias_cuenta_nueva, se obtuvo %v", err)
 	}
 }
+
+func TestTiposDeBajoRiesgoBajanUnEscalon(t *testing.T) {
+	cfg := Config{TiposBajoRiesgo: []string{"recarga_celular"}}
+	if a, r := cfg.Ajustar("recarga_celular", "retener", []string{"dispositivo nuevo"}); a != "desafiar" || len(r) != 2 {
+		t.Fatalf("retener en recarga debe pasar a desafiar con su razón: %s %v", a, r)
+	}
+	if a, _ := cfg.Ajustar("recarga_celular", "desafiar", nil); a != "aprobar" {
+		t.Fatalf("desafiar en recarga debe aprobarse, se obtuvo %s", a)
+	}
+	if a, _ := cfg.Ajustar("transferencia_inmediata", "retener", nil); a != "retener" {
+		t.Fatalf("una transferencia no cambia, se obtuvo %s", a)
+	}
+	ctx, cancelar := context.WithCancel(context.Background())
+	defer cancelar()
+	m, err := Abrir(ctx, "../../config/reglas.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a, _ := m.Instantanea().Ajustar("transferencia_inmediata", "retener", nil); a != "retener" {
+		t.Fatal("las reglas del repositorio no deben suavizar transferencias")
+	}
+}

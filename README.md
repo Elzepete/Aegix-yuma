@@ -1,6 +1,37 @@
 # Escudo Yuma · aegix
 
-Intermediario antifraude en Go para Yuma Pay (ficticia). Decide antes de autorizar cada operación.
+Intermediario antifraude en Go para Yuma Pay (organización ficticia de la hackatón). Decide antes de autorizar
+cada operación: aprobar, pedir un código, retener para un analista o rechazar, con sus razones.
+
+**Resultados** con las 120.972 transacciones del reto: 81,5 % del fraude detectado antes de autorizar (línea base
+62,6 %, después), 17,7 % de falsos positivos (hoy 89 %), p99 de 5,3 ms. Ver [reporte](docs/reporte-indicadores.md).
+
+| Documento | Para qué |
+| --- | --- |
+| [docs/arquitectura.html](docs/arquitectura.html) | diagramas: despliegue, etapas del motor, secuencia de una retención, puntaje, ciclo del analista |
+| [docs/reporte-indicadores.md](docs/reporte-indicadores.md) | cifras medidas, validación temporal, escenarios de ataque |
+| [docs/explicabilidad.md](docs/explicabilidad.md) | cómo decide aegix, cada señal y su peso, límites |
+| [docs/guion-demo.md](docs/guion-demo.md) | demo de 5 minutos con tiempos, preguntas probables y plan B |
+| [docs/despliegue.md](docs/despliegue.md) | publicar gratis: Vercel + túnel con dirección fija |
+
+| Carpeta | Contenido |
+| --- | --- |
+| `cmd/intermediario`, `internal/` | aegix (Go 1.22, sin base de datos) |
+| `cmd/simulador` | carga y escenarios de ataque contra el sandbox del reto |
+| `config/reglas.yaml` | pesos y umbrales; se recargan sin reiniciar |
+| `yuma-billetera/` | billetera de demostración para Vercel |
+| `panel-etapa5/` | consola del operador (React) y su servidor `proxy.mjs` |
+| `herramientas/` | `iniciar.sh`, calibración y etiquetas del analista |
+| `panel-etapa5-billetera/` | prototipo anterior del panel; no lee datos reales |
+
+## Arrancar
+
+```bash
+herramientas/iniciar.sh                  # aegix :8081 y consola http://127.0.0.1:4173
+herramientas/iniciar.sh --demo-limpia    # archiva la auditoría en datos/archivo/ y empieza en cero
+herramientas/iniciar.sh --tunel          # además publica la consola; exige YUMA_PANEL_TOKEN y YUMA_PANEL_CLAVE
+AEGIX_URL=http://127.0.0.1:8081 node yuma-billetera/dev.mjs   # billetera http://localhost:3000
+```
 
 | Ruta | Para qué |
 | --- | --- |
@@ -19,7 +50,9 @@ Intermediario antifraude en Go para Yuma Pay (ficticia). Decide antes de autoriz
 cd panel-etapa5 && npm run build && npm start      # http://127.0.0.1:4173
 ```
 
-Se actualiza solo cada 2 s («En vivo»). En una retención, el detalle del caso permite **liberar** la operación
+Con `YUMA_PANEL_CLAVE` pide contraseña (usuario cualquiera); sin ella, avisa al arrancar y queda abierta en local.
+La consola también reenvía `/v1/autorizar`, `/v1/autorizar/{id}` y `/salud` hacia aegix, así un solo túnel sirve
+para la billetera y el panel. Se actualiza sola cada 2 s («En vivo»). En una retención, el detalle del caso permite **liberar** la operación
 (la billetera descuenta y avisa al cliente) o **confirmar fraude** (queda bloqueada), con confirmación previa.
 La vista «Toda la actividad» muestra cada operación, también las aprobadas; «Casos» solo lo que necesita revisión.
 
@@ -36,21 +69,30 @@ el panel con la misma variable.
 `config/reglas.yaml` se calibró con `herramientas/calibrar_reglas.py` (mayo–agosto para ajustar,
 septiembre–octubre para validar). aegix recarga el archivo en caliente.
 
-| | Reglas etapa-5.1 | Calibradas etapa-5.2 | Línea base / meta |
-| --- | ---: | ---: | ---: |
-| Fraude detectado (validación sep–oct) | 46,2 % | 75,3 % | 62,6 % |
-| Fraude detectado (sandbox, seis meses) | 41,3 %* | 81,6 % | 62,6 % |
-| Falsos positivos (sandbox) | 0 % | 22,0 % | < 60 % (hoy 89 %) |
-| Monto de fraude protegido (sandbox) | — | 87,1 % | 85,4 % (después de autorizar) |
-| Clientes legítimos bloqueados | 0 % | 0,33 % | |
+| | etapa-5.1 | etapa-5.2 | etapa-5.3 | Línea base / meta |
+| --- | ---: | ---: | ---: | ---: |
+| Fraude detectado (validación sep–oct) | 46,2 % | 75,3 % | 75,3 % | 62,6 % |
+| Fraude detectado (sandbox, seis meses) | 41,3 %* | 81,4 % | 81,5 % | 62,6 % |
+| Falsos positivos (sandbox) | 0 % | 22,0 % | 17,7 % | < 60 % (hoy 89 %) |
+| Monto de fraude protegido (sandbox) | — | 87,1 % | 87,0 % | 85,4 % (después de autorizar) |
+| Clientes legítimos bloqueados | 0 % | 0,33 % | 0,25 % | |
 
-\* primeras 20 000 transacciones. La mayor ganancia viene de dos señales nuevas: `cuenta_nueva`
-(las cuentas mula son el 35 % del fraude y todas tienen menos de 90 días) y `departamento_distinto`.
+\* primeras 20 000 transacciones. etapa-5.2 sumó `cuenta_nueva` (las cuentas mula son el 35 % del fraude) y
+`departamento_distinto`. etapa-5.3 bajó la fricción: `tipos_bajo_riesgo`, retiró el monto frente al historial y
+bajó la hora atípica (detalle en el [reporte](docs/reporte-indicadores.md)).
+
+**Ciclo del analista.** Las resoluciones de la consola entran a la calibración como etiquetas:
+
+```bash
+python3 herramientas/calibrar_reglas.py 03_Datos/transacciones.csv --auditoria=datos/decisiones.jsonl
+```
 
 ## Pruebas
 
 ```bash
 go test -race ./...
+(cd yuma-billetera && node --test) && (cd panel-etapa5 && node --test && npm run lint)
+python3 herramientas/etiquetas_analista.py
 ```
 
 `internal/api/servidor_test.go` prueba de extremo a extremo `/score` y `/v1/autorizar` contra un sandbox falso:

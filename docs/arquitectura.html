@@ -1,73 +1,105 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Infraestructura Escudo Yuma</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap">
 <style>
-/* Layout: una columna de lectura (~74ch) que se abre a ancho completo solo para las figuras. */
+/* Una columna de lectura (~74ch) que se abre a ancho completo solo para las figuras. */
 :root {
   --papel: #F4F5FA; --hoja: #FFFFFF; --tinta: #1A1D38; --suave: #5D6283; --regla: #D8DBE8;
-  --aegix: #E7E8F6; --yuma: #0B3B2E; --yuma-zona: #E2EEE8; --reto: #F3EEE2;
+  --aegix: #E7E8F6; --yuma: #0B3B2E; --yuma-zona: #E2EEE8; --reto: #F3EEE2; --tunel: #EEF0F4;
   --ok: #17704A; --alerta: #855700; --retener: #C2401F; --rechazo: #8E1F4D;
   --display: 'Archivo', 'Arial Narrow', system-ui, sans-serif;
   --texto: 'Archivo', system-ui, sans-serif;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --papel: #11132A; --hoja: #191C36; --tinta: #E6E8F5; --suave: #9A9EBD; --regla: #2D3154;
-  --aegix: #1E2244; --yuma: #8FD6B1; --yuma-zona: #15302A; --reto: #2A2618;
+  --papel: #11132A; --hoja: #191C36; --tinta: #E6E8F5; --suave: #A3A7C4; --regla: #2D3154;
+  --aegix: #1E2244; --yuma: #8FD6B1; --yuma-zona: #15302A; --reto: #2A2618; --tunel: #1C1F33;
   --ok: #4CC48F; --alerta: #E4AA3C; --retener: #F07150; --rechazo: #E2689A; color-scheme: dark; } }
 :root[data-theme="dark"] {
-  --papel: #11132A; --hoja: #191C36; --tinta: #E6E8F5; --suave: #9A9EBD; --regla: #2D3154;
-  --aegix: #1E2244; --yuma: #8FD6B1; --yuma-zona: #15302A; --reto: #2A2618;
+  --papel: #11132A; --hoja: #191C36; --tinta: #E6E8F5; --suave: #A3A7C4; --regla: #2D3154;
+  --aegix: #1E2244; --yuma: #8FD6B1; --yuma-zona: #15302A; --reto: #2A2618; --tunel: #1C1F33;
   --ok: #4CC48F; --alerta: #E4AA3C; --retener: #F07150; --rechazo: #E2689A; color-scheme: dark; }
 
 * { box-sizing: border-box; }
-body { background: var(--papel); color: var(--tinta); font: 400 16px/1.55 var(--texto); font-variant-numeric: tabular-nums; }
+body { margin: 0; background: var(--papel); color: var(--tinta); font: 400 16px/1.55 var(--texto); font-variant-numeric: tabular-nums; }
 .envoltura { max-width: 1240px; margin: 0 auto; padding-block: 40px 72px;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 .lectura { max-width: 74ch; }
 h1, h2 { font-family: var(--display); font-stretch: 72%; font-weight: 760; letter-spacing: -.01em; line-height: 1.02; text-wrap: balance; margin: 0; }
 h1 { font-size: clamp(2.4rem, 6vw, 4.2rem); }
-h2 { font-size: clamp(1.6rem, 3.4vw, 2.2rem); margin-top: 56px; }
+h2 { font-size: clamp(1.6rem, 3.4vw, 2.2rem); margin-top: 64px; }
 p { margin: 12px 0 0; }
 .entrada { font-size: 1.15rem; color: var(--suave); margin-top: 16px; }
 .marca { display: flex; align-items: center; gap: 10px; font-family: var(--display); font-stretch: 90%; font-weight: 700; margin-bottom: 28px; }
 .marca svg { width: 28px; height: 28px; }
 
-figure { margin: 28px 0 0; }
+nav.indice { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: .95rem; }
+nav.indice a { color: var(--tinta); text-decoration-color: var(--regla); text-underline-offset: 3px; }
+nav.indice a:hover { text-decoration-color: var(--tinta); }
+
+.leyenda { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 20px; font-size: .9rem; color: var(--suave); }
+.leyenda span { display: inline-flex; align-items: center; gap: 8px; }
+.leyenda i { width: 22px; height: 14px; border-radius: 4px; display: inline-block; }
+
+figure { margin: 24px 0 0; }
 .lienzo { overflow-x: auto; background: var(--hoja); border: 1px solid var(--regla); border-radius: 18px; padding: 12px; }
-.lienzo svg { display: block; width: 100%; min-width: 1150px; height: auto; color: var(--tinta); }
-figcaption { color: var(--suave); font-size: .95rem; margin-top: 10px; max-width: 74ch; }
+.lienzo svg { display: block; width: 100%; min-width: 1100px; height: auto; color: var(--tinta); }
+figcaption { color: var(--suave); font-size: .95rem; margin-top: 10px; max-width: 80ch; }
 
 /* Clases del diagrama */
-.z-aegix { fill: var(--aegix); } .z-yuma { fill: var(--yuma-zona); } .z-reto { fill: var(--reto); }
+.z-aegix { fill: var(--aegix); } .z-yuma { fill: var(--yuma-zona); } .z-reto { fill: var(--reto); } .z-tunel { fill: var(--tunel); }
+.borde-confianza { fill: none; stroke: var(--retener); stroke-width: 1.4; stroke-dasharray: 7 5; }
 .nodo { fill: var(--hoja); stroke: var(--regla); stroke-width: 1.2; }
-.nodo-futuro { fill: none; stroke: var(--suave); stroke-width: 1.2; stroke-dasharray: 5 4; }
-.etapa { fill: var(--hoja); stroke: var(--regla); stroke-width: 1; }
-.etapa-clave { fill: var(--hoja); stroke: var(--tinta); stroke-width: 1.6; }
+.nodo-fuerte { fill: var(--hoja); stroke: var(--tinta); stroke-width: 1.6; }
+.disco { fill: var(--hoja); stroke: var(--suave); stroke-width: 1.2; }
 .linea { stroke: var(--suave); stroke-width: 1.5; fill: none; }
 .linea-yuma { stroke: var(--yuma); stroke-width: 2; fill: none; }
+.linea-r { stroke: var(--retener); stroke-width: 1.5; fill: none; }
+.linea-vuelta { stroke: var(--suave); stroke-width: 1.5; fill: none; stroke-dasharray: 6 4; }
+.vida { stroke: var(--regla); stroke-width: 1.5; stroke-dasharray: 4 5; }
 .t { font: 650 13.5px var(--texto); fill: var(--tinta); }
 .s { font: 400 12px var(--texto); fill: var(--suave); }
+.m { font: 500 12px ui-monospace, 'SFMono-Regular', Menlo, monospace; fill: var(--tinta); }
 .zona { font: 750 14px var(--display); font-stretch: 80%; fill: var(--tinta); }
-.n { font: 760 12px var(--display); fill: var(--suave); }
+.n { font: 760 12px var(--display); fill: var(--hoja); }
+.ncirc { fill: var(--tinta); }
 .corte { font: 650 12px var(--texto); fill: var(--retener); }
+.borde-t { font: 650 12px var(--texto); fill: var(--retener); }
 .flecha-p { fill: var(--suave); } .flecha-y { fill: var(--yuma); } .flecha-r { fill: var(--retener); }
+.paso-activo { fill: var(--retener); fill-opacity: .12; stroke: var(--retener); stroke-width: 1.2; }
 
-/* Regla de latencia */
-.regla-sla { background: var(--hoja); border: 1px solid var(--regla); border-radius: 18px; padding: 20px; margin-top: 28px; }
-.escala { position: relative; height: 64px; margin: 8px 0 28px; border-bottom: 2px solid var(--tinta); }
-.marcador { position: absolute; bottom: -2px; transform: translateX(-1px); border-left: 2px solid var(--c, var(--tinta)); height: var(--h, 40px); }
-.marcador span { position: absolute; left: 6px; top: -2px; white-space: nowrap; font-size: .82rem; color: var(--tinta); }
-.marcador b { font-family: var(--display); font-stretch: 80%; }
-.ticks { display: flex; justify-content: space-between; font-size: .8rem; color: var(--suave); }
-.medidas { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-top: 18px; }
+/* Puntaje */
+.puntajes { background: var(--hoja); border: 1px solid var(--regla); border-radius: 18px; padding: 20px; margin-top: 24px; }
+.escala-p { position: relative; margin: 0 0 6px; height: 22px; font-size: .8rem; color: var(--suave); }
+.escala-p span { position: absolute; transform: translateX(-50%); }
+.caso { display: grid; grid-template-columns: minmax(150px, 220px) 1fr; gap: 6px 18px; align-items: center; margin-top: 16px; }
+.caso .nombre b { display: block; font-weight: 650; }
+.caso .nombre span { color: var(--suave); font-size: .88rem; }
+.barra { position: relative; height: 34px; border-radius: 8px; overflow: hidden;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--ok) 10%, transparent) 0 35%,
+    color-mix(in srgb, var(--alerta) 12%, transparent) 35% 65%,
+    color-mix(in srgb, var(--retener) 12%, transparent) 65% 100%); }
+.barra .seg { position: absolute; top: 5px; bottom: 5px; border-radius: 5px; background: var(--tinta); color: var(--hoja);
+  font-size: .78rem; font-weight: 650; display: flex; align-items: center; justify-content: center; white-space: nowrap; overflow: hidden;
+  border-right: 2px solid var(--hoja); }
+.barra .umbral { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px dashed var(--suave); }
+.resultado { font-weight: 650; display: inline-flex; gap: 8px; align-items: center; }
+.resultado::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+@media (max-width: 640px) { .caso { grid-template-columns: 1fr; } }
+
+/* Métricas */
+.medidas { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 22px; }
+.medida { background: var(--hoja); border: 1px solid var(--regla); border-radius: 14px; padding: 16px; }
 .medida b { display: block; font-family: var(--display); font-stretch: 70%; font-weight: 760; font-size: 2rem; line-height: 1; }
-.medida span { color: var(--suave); font-size: .9rem; }
+.medida span { color: var(--suave); font-size: .9rem; display: block; margin-top: 6px; }
 
 /* Tablas */
 .tabla { overflow-x: auto; margin-top: 18px; }
-table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: .95rem; }
+table { border-collapse: collapse; width: 100%; min-width: 680px; font-size: .95rem; }
 th { text-align: left; font-weight: 650; color: var(--suave); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--regla); }
 td { padding: 11px 12px 11px 0; border-bottom: 1px solid var(--regla); vertical-align: top; }
 td:first-child { white-space: nowrap; }
@@ -81,6 +113,7 @@ td:first-child { white-space: nowrap; }
 .futuro { border: 1px dashed var(--suave); color: var(--suave); }
 .nota { color: var(--suave); font-size: .9rem; }
 code { font-size: .88em; background: var(--aegix); padding: 1px 5px; border-radius: 5px; }
+a:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; border-radius: 3px; }
 </style>
 
 <div class="envoltura">
@@ -90,208 +123,515 @@ code { font-size: .88em; background: var(--aegix); padding: 1px 5px; border-radi
   </div>
   <div class="lectura">
     <h1>Infraestructura de Escudo Yuma</h1>
-    <p class="entrada">Cada operación de la billetera pasa por aegix antes de que salga un peso. aegix decide en menos de un milisegundo y la billetera aplica la decisión. El operador la ve en su panel a los dos segundos.</p>
+    <p class="entrada">Antes de que salga un peso de la billetera, aegix decide si la operación se aprueba, pide un código, se retiene para un analista o se rechaza. Decide en unos 3 ms. La billetera aplica la decisión y el operador la ve en su consola en menos de dos segundos.</p>
+  </div>
+  <nav class="indice" aria-label="Contenido">
+    <a href="#mapa">1. Dónde corre cada pieza</a>
+    <a href="#motor">2. Dentro de aegix</a>
+    <a href="#retencion">3. Un envío retenido</a>
+    <a href="#puntaje">4. Cómo se calcula el puntaje</a>
+    <a href="#ciclo">5. El ciclo del analista</a>
+    <a href="#datos">6. Datos y seguridad</a>
+    <a href="#rutas">7. Rutas</a>
+    <a href="#resultados">8. Resultados</a>
+    <a href="#objetivo">9. Frente al reto</a>
+  </nav>
+  <div class="leyenda" aria-label="Leyenda de colores">
+    <span><i style="background:var(--yuma-zona);border:1px solid var(--regla)"></i>Yuma Pay (billetera)</span>
+    <span><i style="background:var(--aegix);border:1px solid var(--regla)"></i>aegix y su consola</span>
+    <span><i style="background:var(--reto);border:1px solid var(--regla)"></i>Material del reto</span>
+    <span><i style="border:1.5px dashed var(--retener)"></i>Frontera de confianza: hace falta una clave para cruzarla</span>
   </div>
 
+  <!-- 1. Mapa del despliegue -->
+  <div class="lectura"><h2 id="mapa">1. Dónde corre cada pieza</h2>
+    <p>La billetera vive en Vercel. aegix y la consola corren en el equipo del proyecto y solo escuchan en 127.0.0.1. Un túnel HTTPS con dirección fija los conecta con internet sin abrir puertos. El túnel llega a la consola, no a aegix: la consola deja pasar tres rutas de la billetera y pide contraseña para todo lo demás.</p></div>
   <figure>
     <div class="lienzo">
-      <svg viewBox="0 0 1200 680" role="img" aria-label="Dos entradas llegan al mismo motor: la billetera Yuma pasa por una función de Vercel y un túnel hasta POST /v1/autorizar, y el simulador del reto llega a POST /score. Dentro de aegix la operación recorre nueve etapas, de la validación al registro. El registro alimenta la auditoría, el panel del operador y las métricas; solo lo que llega por /score se reporta al sandbox.">
+      <svg viewBox="0 0 1200 640" role="img" aria-label="El cliente usa la billetera alojada en Vercel. La función /api/autorizar de Vercel llama por HTTPS al túnel con dirección fija, que entrega a la consola en el puerto 4173 del equipo. La consola deja pasar /v1/autorizar y /salud hacia aegix en el puerto 8081 y exige contraseña para el panel. aegix escribe la auditoría, lee las reglas y, para el reto, recibe el simulador y reporta al sandbox.">
         <defs>
-          <marker id="pf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="flecha-p"/></marker>
-          <marker id="yf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="flecha-y"/></marker>
-          <marker id="rf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" class="flecha-r"/></marker>
+          <marker id="m1p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="flecha-p"/></marker>
+          <marker id="m1y" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="flecha-y"/></marker>
         </defs>
 
-        <!-- Zona Yuma -->
-        <rect x="10" y="30" width="425" height="170" rx="14" class="z-yuma"/>
-        <text x="26" y="54" class="zona">Yuma Pay</text>
-        <rect x="24" y="70" width="170" height="96" rx="10" class="nodo"/>
-        <text x="109" y="100" text-anchor="middle" class="t">Billetera Yuma</text>
-        <text x="109" y="119" text-anchor="middle" class="s">navegador del cliente</text>
-        <text x="109" y="135" text-anchor="middle" class="s">saldos en el dispositivo</text>
-        <text x="109" y="151" text-anchor="middle" class="s">valida el destino</text>
-        <rect x="250" y="70" width="170" height="96" rx="10" class="nodo"/>
-        <text x="335" y="100" text-anchor="middle" class="t">/api/autorizar</text>
-        <text x="335" y="119" text-anchor="middle" class="s">función de Vercel</text>
-        <text x="335" y="135" text-anchor="middle" class="s">agrega IP y país reales</text>
-        <text x="335" y="151" text-anchor="middle" class="s">guarda la clave de aegix</text>
-        <line x1="196" y1="118" x2="248" y2="118" class="linea-yuma" marker-start="url(#yf)" marker-end="url(#yf)"/>
-        <text x="222" y="108" text-anchor="middle" class="s">JSON</text>
+        <!-- Internet -->
+        <rect x="10" y="20" width="380" height="600" rx="14" class="z-yuma"/>
+        <text x="26" y="46" class="zona">Internet</text>
+        <rect x="28" y="70" width="150" height="86" rx="10" class="nodo"/>
+        <text x="103" y="98" text-anchor="middle" class="t">Cliente</text>
+        <text x="103" y="117" text-anchor="middle" class="s">navegador o celular</text>
+        <text x="103" y="133" text-anchor="middle" class="s">saldo en localStorage</text>
+        <rect x="214" y="60" width="160" height="196" rx="10" class="nodo-fuerte"/>
+        <text x="294" y="86" text-anchor="middle" class="t">Vercel · gratis</text>
+        <text x="228" y="110" class="s">index.html, app.js,</text>
+        <text x="228" y="126" class="s">nucleo.js (valida destino)</text>
+        <line x1="228" y1="138" x2="360" y2="138" stroke="var(--regla)"/>
+        <text x="228" y="158" class="m">api/autorizar.js</text>
+        <text x="228" y="176" class="s">añade IP y país reales</text>
+        <text x="228" y="192" class="s">guarda AEGIX_URL y</text>
+        <text x="228" y="208" class="s">AEGIX_TOKEN (nunca en</text>
+        <text x="228" y="224" class="s">el navegador)</text>
+        <text x="228" y="242" class="s">plazo 4 s, falla cerrada</text>
+        <line x1="180" y1="100" x2="212" y2="100" class="linea-yuma" marker-end="url(#m1y)"/>
+        <text x="196" y="186" text-anchor="middle" class="s" transform="rotate(-90 196 186)">HTTPS</text>
+        <line x1="180" y1="126" x2="212" y2="126" class="linea-yuma" marker-start="url(#m1y)"/>
+
+        <rect x="28" y="470" width="170" height="86" rx="10" class="nodo"/>
+        <text x="113" y="498" text-anchor="middle" class="t">Analista</text>
+        <text x="113" y="517" text-anchor="middle" class="s">navegador</text>
+        <text x="113" y="533" text-anchor="middle" class="s">usuario + contraseña</text>
 
         <!-- Túnel -->
-        <text x="527" y="54" text-anchor="middle" class="zona">Internet</text>
-        <rect x="462" y="86" width="130" height="64" rx="10" class="nodo"/>
-        <text x="527" y="113" text-anchor="middle" class="t">Cloudflare Tunnel</text>
-        <text x="527" y="131" text-anchor="middle" class="s">HTTPS, sin abrir puertos</text>
-        <line x1="422" y1="118" x2="460" y2="118" class="linea-yuma" marker-start="url(#yf)" marker-end="url(#yf)"/>
-        <line x1="594" y1="118" x2="678" y2="118" class="linea-yuma" marker-start="url(#yf)" marker-end="url(#yf)"/>
-        <text x="636" y="108" text-anchor="middle" class="s">/v1/autorizar</text>
+        <rect x="410" y="20" width="160" height="600" rx="14" class="z-tunel"/>
+        <text x="426" y="46" class="zona">Túnel HTTPS</text>
+        <rect x="424" y="200" width="132" height="220" rx="10" class="nodo"/>
+        <text x="490" y="228" text-anchor="middle" class="t">ngrok</text>
+        <text x="490" y="246" text-anchor="middle" class="s">dominio fijo gratis</text>
+        <text x="490" y="276" text-anchor="middle" class="m">aegix-demo.</text>
+        <text x="490" y="292" text-anchor="middle" class="m">ngrok-free.app</text>
+        <text x="490" y="322" text-anchor="middle" class="s">sale del equipo;</text>
+        <text x="490" y="338" text-anchor="middle" class="s">no abre puertos</text>
+        <text x="490" y="368" text-anchor="middle" class="s">alternativa:</text>
+        <text x="490" y="384" text-anchor="middle" class="s">Cloudflare Tunnel</text>
 
-        <text x="26" y="250" class="t">Dos entradas, un mismo motor.</text>
-        <text x="26" y="270" class="s">La billetera autoriza operaciones nuevas.</text>
-        <text x="26" y="287" class="s">El simulador repite las 120.972 del reto</text>
-        <text x="26" y="304" class="s">y el sandbox las califica.</text>
+        <path d="M376 180 H400 V250 H422" class="linea-yuma" marker-end="url(#m1y)"/>
+        <text x="228" y="282" class="s">hacia el túnel:</text>
+        <text x="228" y="300" class="m">POST /v1/autorizar</text>
+        <text x="228" y="316" class="m">GET /v1/autorizar/{id}</text>
+        <text x="228" y="334" class="s">+ Bearer AEGIX_TOKEN</text>
+        <path d="M200 513 H400 V380 H422" class="linea" marker-end="url(#m1p)"/>
+        <text x="214" y="503" class="s">HTTPS, contraseña del panel</text>
 
-        <!-- Zona aegix -->
-        <rect x="620" y="30" width="375" height="620" rx="14" class="z-aegix"/>
-        <text x="636" y="54" class="zona">aegix · proceso Go en 127.0.0.1:8081</text>
-        <g>
-          <rect x="680" y="96" width="240" height="44" rx="8" class="etapa"/>
-          <text x="694" y="123" class="n">1</text><text x="712" y="114" class="t">Entrada</text><text x="712" y="130" class="s">clave Bearer en /v1/autorizar</text>
-          <rect x="680" y="156" width="240" height="44" rx="8" class="etapa"/>
-          <text x="694" y="183" class="n">2</text><text x="712" y="174" class="t">Decodificar y validar</text><text x="712" y="190" class="s">64 KiB, esquema estricto, versión</text>
-          <rect x="680" y="216" width="240" height="44" rx="8" class="etapa"/>
-          <text x="694" y="243" class="n">3</text><text x="712" y="234" class="t">Límite de tasa</text><text x="712" y="250" class="s">30/s cliente, 1.500/s IP</text>
-          <rect x="680" y="276" width="240" height="44" rx="8" class="etapa"/>
-          <text x="694" y="303" class="n">4</text><text x="712" y="294" class="t">Cola de trabajo</text><text x="712" y="310" class="s">150 en paralelo, plazo 250 ms</text>
-          <rect x="680" y="336" width="240" height="44" rx="8" class="etapa"/>
-          <text x="694" y="363" class="n">5</text><text x="712" y="354" class="t">Origen de la conexión</text><text x="712" y="370" class="s">Tor, proxy y país</text>
-          <rect x="680" y="396" width="240" height="44" rx="8" class="etapa"/>
-          <text x="694" y="423" class="n">6</text><text x="712" y="414" class="t">Historial del cliente</text><text x="712" y="430" class="s">percentil, hora habitual, ráfagas</text>
-          <rect x="680" y="456" width="240" height="44" rx="8" class="etapa-clave"/>
-          <text x="694" y="483" class="n">7</text><text x="712" y="474" class="t">Motor de reglas etapa-5.2</text><text x="712" y="490" class="s">13 señales, recarga en caliente</text>
-          <rect x="680" y="516" width="240" height="44" rx="8" class="etapa-clave"/>
-          <text x="694" y="543" class="n">8</text><text x="712" y="534" class="t">Decisor</text><text x="712" y="550" class="s">≥ 0,35 desafiar · ≥ 0,65 retener</text>
-          <rect x="680" y="576" width="240" height="44" rx="8" class="etapa"/>
-          <text x="694" y="603" class="n">9</text><text x="712" y="594" class="t">Registro</text><text x="712" y="610" class="s">auditoría HMAC y métricas</text>
-        </g>
-        <g class="linea">
-          <line x1="800" y1="140" x2="800" y2="154" marker-end="url(#pf)"/>
-          <line x1="800" y1="200" x2="800" y2="214" marker-end="url(#pf)"/>
-          <line x1="800" y1="260" x2="800" y2="274" marker-end="url(#pf)"/>
-          <line x1="800" y1="320" x2="800" y2="334" marker-end="url(#pf)"/>
-          <line x1="800" y1="380" x2="800" y2="394" marker-end="url(#pf)"/>
-          <line x1="800" y1="440" x2="800" y2="454" marker-end="url(#pf)"/>
-          <line x1="800" y1="500" x2="800" y2="514" marker-end="url(#pf)"/>
-          <line x1="800" y1="560" x2="800" y2="574" marker-end="url(#pf)"/>
-        </g>
-        <!-- Salidas tempranas -->
-        <line x1="921" y1="178" x2="936" y2="178" stroke="var(--retener)" stroke-width="1.5" marker-end="url(#rf)"/><text x="940" y="182" class="corte">400</text>
-        <line x1="921" y1="238" x2="936" y2="238" stroke="var(--retener)" stroke-width="1.5" marker-end="url(#rf)"/><text x="940" y="242" class="corte">429</text>
-        <line x1="921" y1="298" x2="936" y2="298" stroke="var(--retener)" stroke-width="1.5" marker-end="url(#rf)"/><text x="940" y="302" class="corte">desafiar</text>
+        <!-- Equipo -->
+        <rect x="590" y="20" width="600" height="600" rx="14" class="z-aegix"/>
+        <text x="606" y="46" class="zona">Equipo del proyecto · solo 127.0.0.1</text>
+        <rect x="598" y="180" width="236" height="300" rx="12" class="borde-confianza"/>
+        <text x="606" y="172" class="borde-t">frontera: contraseña o Bearer</text>
 
-        <!-- Operación y observabilidad -->
-        <text x="1030" y="54" class="zona">Operación</text>
-        <rect x="1030" y="70" width="160" height="96" rx="10" class="nodo"/>
-        <text x="1110" y="100" text-anchor="middle" class="t">Panel del operador</text>
-        <text x="1110" y="119" text-anchor="middle" class="s">React en :4173</text>
-        <text x="1110" y="135" text-anchor="middle" class="s">consulta cada 2 s</text>
-        <text x="1110" y="151" text-anchor="middle" class="s">alertas y métricas</text>
-        <rect x="1030" y="254" width="160" height="88" rx="10" class="nodo"/>
-        <text x="1110" y="284" text-anchor="middle" class="t">decisiones.jsonl</text>
-        <text x="1110" y="303" text-anchor="middle" class="s">solo se agrega, no se edita</text>
-        <text x="1110" y="319" text-anchor="middle" class="s">IDs con HMAC-SHA256</text>
-        <rect x="1030" y="414" width="160" height="88" rx="10" class="nodo-futuro"/>
-        <text x="1110" y="444" text-anchor="middle" class="t">Prometheus y Grafana</text>
-        <text x="1110" y="463" text-anchor="middle" class="s">leen /metrics</text>
-        <text x="1110" y="479" text-anchor="middle" class="s">siguiente fase</text>
-        <polyline points="921,598 1010,598 1010,118" class="linea"/>
-        <line x1="1010" y1="118" x2="1028" y2="118" class="linea" marker-end="url(#pf)"/>
-        <line x1="1010" y1="298" x2="1028" y2="298" class="linea" marker-end="url(#pf)"/>
-        <line x1="1010" y1="458" x2="1028" y2="458" class="linea" stroke-dasharray="5 4" marker-end="url(#pf)"/>
+        <rect x="610" y="196" width="212" height="270" rx="10" class="nodo-fuerte"/>
+        <text x="716" y="222" text-anchor="middle" class="t">Consola · :4173</text>
+        <text x="716" y="240" text-anchor="middle" class="m">panel-etapa5/proxy.mjs</text>
+        <line x1="624" y1="252" x2="808" y2="252" stroke="var(--regla)"/>
+        <text x="624" y="272" class="s">Pasan sin contraseña (aegix</text>
+        <text x="624" y="288" class="s">valida su propio Bearer):</text>
+        <text x="624" y="306" class="m">POST /v1/autorizar</text>
+        <text x="624" y="322" class="m">GET  /v1/autorizar/{id}</text>
+        <text x="624" y="338" class="m">GET  /salud</text>
+        <line x1="624" y1="352" x2="808" y2="352" stroke="var(--regla)"/>
+        <text x="624" y="372" class="s">Con contraseña (Basic):</text>
+        <text x="624" y="390" class="s">panel React compilado y</text>
+        <text x="624" y="406" class="m">/api/* → aegix</text>
+        <text x="624" y="422" class="s">con YUMA_PANEL_TOKEN</text>
+        <text x="624" y="446" class="s">resolver casos, métricas</text>
 
-        <!-- Zona del reto -->
-        <rect x="10" y="380" width="600" height="280" rx="14" class="z-reto"/>
-        <text x="26" y="404" class="zona">Reto Escudo Yuma</text>
-        <rect x="24" y="430" width="170" height="100" rx="10" class="nodo"/>
-        <text x="109" y="460" text-anchor="middle" class="t">Sandbox del reto</text>
-        <text x="109" y="479" text-anchor="middle" class="s">Python en :8080</text>
-        <text x="109" y="495" text-anchor="middle" class="s">120.972 transacciones</text>
-        <text x="109" y="511" text-anchor="middle" class="s">califica cada decisión</text>
-        <rect x="250" y="430" width="170" height="100" rx="10" class="nodo"/>
-        <text x="335" y="460" text-anchor="middle" class="t">Simulador</text>
-        <text x="335" y="479" text-anchor="middle" class="s">Go, hasta 2.100 TPS</text>
-        <text x="335" y="495" text-anchor="middle" class="s">6 escenarios de fraude</text>
-        <text x="335" y="511" text-anchor="middle" class="s">-verificar contra metas</text>
-        <rect x="250" y="556" width="170" height="70" rx="10" class="nodo"/>
-        <text x="335" y="584" text-anchor="middle" class="t">Calibrador</text>
-        <text x="335" y="603" text-anchor="middle" class="s">ajusta reglas.yaml</text>
-        <line x1="196" y1="470" x2="248" y2="470" class="linea" marker-end="url(#pf)"/>
-        <text x="222" y="460" text-anchor="middle" class="s">lotes</text>
-        <polyline points="422,480 650,480 650,132 678,132" class="linea" marker-start="url(#pf)" marker-end="url(#pf)"/>
-        <text x="436" y="472" class="s">POST /score, respuesta síncrona</text>
-        <polyline points="679,598 664,598 664,645 109,645 109,532" class="linea" marker-end="url(#pf)"/>
-        <text x="300" y="638" class="s">reporta la decisión, solo lo que llega por /score</text>
+        <line x1="558" y1="310" x2="608" y2="310" class="linea" marker-end="url(#m1p)"/>
+
+        <rect x="880" y="196" width="200" height="270" rx="10" class="nodo-fuerte"/>
+        <text x="980" y="222" text-anchor="middle" class="t">aegix · :8081</text>
+        <text x="980" y="240" text-anchor="middle" class="s">un binario Go, sin base de datos</text>
+        <line x1="894" y1="252" x2="1066" y2="252" stroke="var(--regla)"/>
+        <text x="894" y="272" class="m">/v1/autorizar</text><text x="894" y="288" class="s">billetera (Bearer)</text>
+        <text x="894" y="310" class="m">/score</text><text x="894" y="326" class="s">transacciones del reto</text>
+        <text x="894" y="348" class="m">/alertas /decisiones</text><text x="894" y="364" class="s">cola y actividad (Bearer)</text>
+        <text x="894" y="386" class="m">/metricas /metrics</text><text x="894" y="402" class="s">JSON y Prometheus</text>
+        <text x="894" y="428" class="s">límite: 30/s por cliente,</text>
+        <text x="894" y="444" class="s">1.500/s por IP</text>
+
+        <line x1="824" y1="290" x2="878" y2="290" class="linea" marker-end="url(#m1p)"/>
+        <text x="851" y="280" text-anchor="middle" class="s">HTTP</text>
+        <line x1="824" y1="390" x2="878" y2="390" class="linea" marker-start="url(#m1p)" marker-end="url(#m1p)"/>
+        <text x="851" y="380" text-anchor="middle" class="s">cada 2 s</text>
+
+        <!-- Disco -->
+        <rect x="848" y="512" width="168" height="88" rx="10" class="disco"/>
+        <text x="932" y="536" text-anchor="middle" class="m">datos/decisiones.jsonl</text>
+        <text x="932" y="554" text-anchor="middle" class="s">auditoría, solo agrega</text>
+        <text x="932" y="570" text-anchor="middle" class="s">+ .clave HMAC (0600)</text>
+        <text x="932" y="586" text-anchor="middle" class="s">se relee al arrancar</text>
+        <rect x="1026" y="512" width="150" height="88" rx="10" class="disco"/>
+        <text x="1101" y="536" text-anchor="middle" class="m">config/reglas.yaml</text>
+        <text x="1101" y="554" text-anchor="middle" class="s">pesos y umbrales</text>
+        <text x="1101" y="570" text-anchor="middle" class="s">versión etapa-5.3</text>
+        <text x="1101" y="586" text-anchor="middle" class="s">recarga en caliente</text>
+        <line x1="950" y1="468" x2="950" y2="510" class="linea" marker-end="url(#m1p)"/>
+        <text x="944" y="494" text-anchor="end" class="s">escribe</text>
+        <line x1="1060" y1="510" x2="1060" y2="468" class="linea" marker-end="url(#m1p)"/>
+        <text x="1066" y="494" class="s">lee</text>
+
+        <!-- Reto -->
+        <rect x="856" y="62" width="320" height="104" rx="12" class="z-reto"/>
+        <text x="870" y="84" class="zona">Reto · solo para medir</text>
+        <rect x="870" y="96" width="132" height="58" rx="8" class="nodo"/>
+        <text x="936" y="120" text-anchor="middle" class="t">Simulador</text>
+        <text x="936" y="138" text-anchor="middle" class="m">cmd/simulador</text>
+        <rect x="1030" y="96" width="132" height="58" rx="8" class="nodo"/>
+        <text x="1096" y="120" text-anchor="middle" class="t">Sandbox :8080</text>
+        <text x="1096" y="138" text-anchor="middle" class="s">califica decisiones</text>
+        <line x1="936" y1="156" x2="936" y2="194" class="linea" marker-end="url(#m1p)"/>
+        <text x="930" y="180" text-anchor="end" class="s">POST /score</text>
+        <line x1="1040" y1="194" x2="1080" y2="156" class="linea" marker-end="url(#m1p)"/>
+        <text x="1086" y="182" class="s">reporta la decisión</text>
       </svg>
     </div>
-    <figcaption>Las dos entradas recorren las mismas nueve etapas. Una solicitud inválida sale en la etapa 2 (400), una ráfaga en la 3 (429) y, si se agota el plazo de 250 ms, aegix pide un desafío en vez de aprobar a ciegas. El recuadro punteado todavía no existe.</figcaption>
+    <figcaption>Dos claves protegen el equipo: la billetera presenta <code>AEGIX_TOKEN</code> (el mismo valor que <code>YUMA_PANEL_TOKEN</code> en aegix) y el analista escribe <code>YUMA_PANEL_CLAVE</code>. <code>/score</code>, <code>/metricas</code> y la resolución de casos no son alcanzables desde internet sin la contraseña. Si se cae internet, todo corre en local (plan B en <code>docs/despliegue.md</code>).</figcaption>
   </figure>
 
-  <div class="lectura"><h2>Presupuesto de 300 ms</h2>
-    <p>El reto exige decidir en menos de 300 milisegundos y aguantar picos de 150 transacciones por segundo. Estas son medidas reales del sistema, no estimaciones.</p></div>
-  <div class="regla-sla" role="img" aria-label="Sobre una escala de 0 a 300 ms, aegix decide con p99 de 0,5 ms, el simulador ve p99 de 5,3 ms y la billetera local ve entre 13 y 54 ms de ida y vuelta.">
-    <div class="escala">
-      <div class="marcador" style="left:0.2%;--c:var(--ok);--h:56px"><span><b>0,5 ms</b> decisión de aegix, p99</span></div>
-      <div class="marcador" style="left:1.8%;--c:var(--ok);--h:36px"><span><b>5,3 ms</b> simulador, p99</span></div>
-      <div class="marcador" style="left:18%;--c:var(--yuma);--h:20px"><span><b>13–54 ms</b> billetera local, ida y vuelta</span></div>
-      <div class="marcador" style="left:99.6%;--c:var(--retener);--h:64px"><span style="left:auto;right:6px">SLA</span></div>
+  <!-- 2. Motor -->
+  <div class="lectura"><h2 id="motor">2. Dentro de aegix: nueve etapas en unos 3 ms</h2>
+    <p>Las dos entradas (<code>/v1/autorizar</code> y <code>/score</code>) usan el mismo código. Cada etapa tiene su archivo. Una solicitud puede salir antes por tres puertas: inválida, ráfaga o plazo agotado.</p></div>
+  <figure>
+    <div class="lienzo">
+      <svg viewBox="0 0 1200 470" role="img" aria-label="Etapas en orden: 1 entrada con clave Bearer, 2 validación del esquema que rechaza con 400, 3 límite de tasa que rechaza con 429, 4 origen de la IP, 5 historial del cliente, 6 suma de pesos de las reglas, 7 umbrales de decisión, 8 ajuste de operaciones de bajo riesgo y 9 registro en la auditoría y métricas antes de responder. Si se agotan 250 ms, aegix responde desafiar.">
+        <defs>
+          <marker id="m2p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="flecha-p"/></marker>
+          <marker id="m2r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" class="flecha-r"/></marker>
+        </defs>
+        <rect x="8" y="8" width="1184" height="454" rx="14" class="z-aegix"/>
+
+        <!-- Fila 1: izquierda a derecha -->
+        <g>
+          <rect x="24" y="84" width="208" height="118" rx="10" class="nodo"/>
+          <circle cx="44" cy="106" r="11" class="ncirc"/><text x="44" y="110" text-anchor="middle" class="n">1</text>
+          <text x="62" y="111" class="t">Entrada</text>
+          <text x="38" y="134" class="m">api/servidor.go</text>
+          <text x="38" y="154" class="s">Bearer en /v1/autorizar;</text>
+          <text x="38" y="170" class="s">empieza el reloj de 250 ms</text>
+          <text x="38" y="186" class="s">cuerpo ≤ 64 KiB</text>
+
+          <rect x="256" y="84" width="208" height="118" rx="10" class="nodo"/>
+          <circle cx="276" cy="106" r="11" class="ncirc"/><text x="276" y="110" text-anchor="middle" class="n">2</text>
+          <text x="294" y="111" class="t">Validar</text>
+          <text x="270" y="134" class="m">defensas/validacion.go</text>
+          <text x="270" y="154" class="s">esquema estricto, campos</text>
+          <text x="270" y="170" class="s">desconocidos fuera, fecha,</text>
+          <text x="270" y="186" class="s">versión de la app, IP</text>
+
+          <rect x="488" y="84" width="208" height="118" rx="10" class="nodo"/>
+          <circle cx="508" cy="106" r="11" class="ncirc"/><text x="508" y="110" text-anchor="middle" class="n">3</text>
+          <text x="526" y="111" class="t">Límite de tasa</text>
+          <text x="502" y="134" class="m">defensas/limites.go</text>
+          <text x="502" y="154" class="s">por cliente, IP y</text>
+          <text x="502" y="170" class="s">dispositivo, ventana de 1 s</text>
+          <text x="502" y="186" class="s">frena bots y ráfagas</text>
+
+          <rect x="720" y="84" width="208" height="118" rx="10" class="nodo"/>
+          <circle cx="740" cy="106" r="11" class="ncirc"/><text x="740" y="110" text-anchor="middle" class="n">4</text>
+          <text x="758" y="111" class="t">Origen de la IP</text>
+          <text x="734" y="134" class="m">contexto/origen.go</text>
+          <text x="734" y="154" class="s">Tor, proxy o centro de</text>
+          <text x="734" y="170" class="s">datos, país (GeoIP local</text>
+          <text x="734" y="186" class="s">o el que envía la billetera)</text>
+
+          <rect x="952" y="84" width="224" height="118" rx="10" class="nodo"/>
+          <circle cx="972" cy="106" r="11" class="ncirc"/><text x="972" y="110" text-anchor="middle" class="n">5</text>
+          <text x="990" y="111" class="t">Historial del cliente</text>
+          <text x="966" y="134" class="m">contexto/historial.go</text>
+          <text x="966" y="154" class="s">hora habitual, países vistos,</text>
+          <text x="966" y="170" class="s">operaciones en 10 min</text>
+          <text x="966" y="186" class="s">(en memoria, por cliente)</text>
+        </g>
+        <line x1="232" y1="143" x2="254" y2="143" class="linea" marker-end="url(#m2p)"/>
+        <line x1="464" y1="143" x2="486" y2="143" class="linea" marker-end="url(#m2p)"/>
+        <line x1="696" y1="143" x2="718" y2="143" class="linea" marker-end="url(#m2p)"/>
+        <line x1="928" y1="143" x2="950" y2="143" class="linea" marker-end="url(#m2p)"/>
+        <path d="M1064 204 V232 H1080 V258" class="linea" marker-end="url(#m2p)"/>
+
+        <!-- Salidas tempranas -->
+        <line x1="360" y1="82" x2="360" y2="46" class="linea-r" marker-end="url(#m2r)"/>
+        <text x="368" y="44" class="corte">400 rechazar · «el cuerpo no cumple el esquema»</text>
+        <line x1="592" y1="82" x2="592" y2="62" class="linea-r" marker-end="url(#m2r)"/>
+        <text x="600" y="68" class="corte">429 rechazar · «límite de solicitudes»</text>
+        <text x="24" y="44" class="zona">Salidas tempranas</text>
+
+        <!-- Fila 2: derecha a izquierda -->
+        <g>
+          <rect x="952" y="260" width="224" height="118" rx="10" class="nodo-fuerte"/>
+          <circle cx="972" cy="282" r="11" class="ncirc"/><text x="972" y="286" text-anchor="middle" class="n">6</text>
+          <text x="990" y="287" class="t">Sumar pesos</text>
+          <text x="966" y="310" class="m">reglas/motor.go</text>
+          <text x="966" y="330" class="s">cada señal activa suma su</text>
+          <text x="966" y="346" class="s">peso (tope 1); razones de</text>
+          <text x="966" y="362" class="s">mayor a menor peso</text>
+
+          <rect x="720" y="260" width="208" height="118" rx="10" class="nodo-fuerte"/>
+          <circle cx="740" cy="282" r="11" class="ncirc"/><text x="740" y="286" text-anchor="middle" class="n">7</text>
+          <text x="758" y="287" class="t">Umbrales</text>
+          <text x="734" y="310" class="m">decisor/decisor.go</text>
+          <text x="734" y="330" class="s">&lt; 0,35 aprobar · ≥ 0,35</text>
+          <text x="734" y="346" class="s">desafiar · ≥ 0,65 retener si</text>
+          <text x="734" y="362" class="s">hay señal ajena al origen</text>
+
+          <rect x="488" y="260" width="208" height="118" rx="10" class="nodo"/>
+          <circle cx="508" cy="282" r="11" class="ncirc"/><text x="508" y="286" text-anchor="middle" class="n">8</text>
+          <text x="526" y="287" class="t">Bajo riesgo</text>
+          <text x="502" y="310" class="m">Config.Ajustar</text>
+          <text x="502" y="330" class="s">recargas, servicios y</text>
+          <text x="502" y="346" class="s">tarjeta virtual bajan un</text>
+          <text x="502" y="362" class="s">escalón (0 fraudes en datos)</text>
+
+          <rect x="256" y="260" width="208" height="118" rx="10" class="nodo"/>
+          <circle cx="276" cy="282" r="11" class="ncirc"/><text x="276" y="286" text-anchor="middle" class="n">9</text>
+          <text x="294" y="287" class="t">Registrar</text>
+          <text x="270" y="310" class="m">registro/registro.go</text>
+          <text x="270" y="330" class="s">evento JSONL con HMAC del</text>
+          <text x="270" y="346" class="s">id y versión de reglas;</text>
+          <text x="270" y="362" class="s">métricas (api/metricas.go)</text>
+
+          <rect x="24" y="260" width="208" height="118" rx="10" class="nodo"/>
+          <text x="38" y="287" class="t">Respuesta</text>
+          <text x="38" y="310" class="m">{decision, puntaje,</text>
+          <text x="38" y="326" class="m"> razones, version_reglas,</text>
+          <text x="38" y="342" class="m"> latencia_ms}</text>
+          <text x="38" y="362" class="s">/score además lo reporta</text>
+        </g>
+        <line x1="950" y1="319" x2="930" y2="319" class="linea" marker-end="url(#m2p)"/>
+        <line x1="718" y1="319" x2="698" y2="319" class="linea" marker-end="url(#m2p)"/>
+        <line x1="486" y1="319" x2="466" y2="319" class="linea" marker-end="url(#m2p)"/>
+        <line x1="254" y1="319" x2="234" y2="319" class="linea" marker-end="url(#m2p)"/>
+
+        <!-- Plazo -->
+        <rect x="488" y="398" width="688" height="44" rx="8" class="paso-activo"/>
+        <text x="502" y="417" class="corte">Plazo de 250 ms para las etapas 4 a 8. Si se agota: desafiar, contingencia «tiempo_agotado».</text>
+        <text x="502" y="434" class="s">Nunca se aprueba a ciegas. Medido: p99 de 5,3 ms con 4 clientes en paralelo; máximo observado en tres corridas, 192 ms.</text>
+      </svg>
     </div>
-    <div class="ticks"><span>0 ms</span><span>100</span><span>200</span><span>300 ms</span></div>
-    <div class="medidas">
-      <div class="medida"><b>2.100 TPS</b><span>sostenidos con 4 clientes en paralelo; el pico exigido es 150</span></div>
-      <div class="medida"><b>0 errores</b><span>en 120.972 transacciones del reto</span></div>
-      <div class="medida"><b>100 %</b><span>de decisiones dentro del SLA</span></div>
+    <figcaption>Las etapas 6 y 7 son toda la «inteligencia» y caben en una hoja: <code>config/reglas.yaml</code>. Cambiar un peso no requiere compilar ni reiniciar; aegix detecta el archivo nuevo, lo valida y, si es inválido, sigue con la versión anterior.</figcaption>
+  </figure>
+
+  <!-- 3. Secuencia -->
+  <div class="lectura"><h2 id="retencion">3. Un envío retenido, de punta a punta</h2>
+    <p>El caso más completo: una toma de cuenta. La plata no sale hasta que un analista decide, y la billetera se entera sola.</p></div>
+  <figure>
+    <div class="lienzo">
+      <svg viewBox="0 0 1200 700" role="img" aria-label="Diagrama de secuencia en trece pasos. El cliente envía, Vercel añade IP y la clave, la consola reenvía a aegix, aegix decide retener en unos 3 ms y lo escribe en la auditoría; la billetera muestra En revisión. La consola, que consulta cada 2 segundos, muestra el caso; el analista pulsa Liberar, aegix guarda la resolución, y la billetera, que pregunta cada 4 segundos, recibe liberada, descuenta y avisa al cliente.">
+        <defs>
+          <marker id="m3p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="flecha-p"/></marker>
+          <marker id="m3y" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="flecha-y"/></marker>
+          <marker id="m3r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="flecha-r"/></marker>
+        </defs>
+        <!-- Cabeceras -->
+        <g>
+          <rect x="30" y="16" width="140" height="48" rx="10" class="z-yuma"/><text x="100" y="38" text-anchor="middle" class="t">Cliente</text><text x="100" y="54" text-anchor="middle" class="s">billetera</text>
+          <rect x="230" y="16" width="140" height="48" rx="10" class="z-yuma"/><text x="300" y="38" text-anchor="middle" class="t">Vercel</text><text x="300" y="54" text-anchor="middle" class="m">api/autorizar.js</text>
+          <rect x="430" y="16" width="140" height="48" rx="10" class="z-aegix"/><text x="500" y="38" text-anchor="middle" class="t">Túnel + consola</text><text x="500" y="54" text-anchor="middle" class="m">proxy.mjs</text>
+          <rect x="630" y="16" width="140" height="48" rx="10" class="z-aegix"/><text x="700" y="38" text-anchor="middle" class="t">aegix</text><text x="700" y="54" text-anchor="middle" class="s">:8081</text>
+          <rect x="830" y="16" width="140" height="48" rx="10" class="z-aegix"/><text x="900" y="38" text-anchor="middle" class="t">Auditoría</text><text x="900" y="54" text-anchor="middle" class="m">decisiones.jsonl</text>
+          <rect x="1030" y="16" width="140" height="48" rx="10" class="z-aegix"/><text x="1100" y="38" text-anchor="middle" class="t">Analista</text><text x="1100" y="54" text-anchor="middle" class="s">consola en vivo</text>
+        </g>
+        <line x1="100" y1="66" x2="100" y2="690" class="vida"/>
+        <line x1="300" y1="66" x2="300" y2="690" class="vida"/>
+        <line x1="500" y1="66" x2="500" y2="690" class="vida"/>
+        <line x1="700" y1="66" x2="700" y2="690" class="vida"/>
+        <line x1="900" y1="66" x2="900" y2="690" class="vida"/>
+        <line x1="1100" y1="66" x2="1100" y2="690" class="vida"/>
+
+        <!-- Fase 1: decidir -->
+        <text x="12" y="92" class="zona">Decidir · ≈ 100 ms con la red</text>
+        <line x1="100" y1="114" x2="298" y2="114" class="linea-yuma" marker-end="url(#m3y)"/>
+        <text x="110" y="108" class="s">1  POST /api/autorizar {transacción, contexto}</text>
+        <line x1="300" y1="148" x2="498" y2="148" class="linea-yuma" marker-end="url(#m3y)"/>
+        <text x="310" y="142" class="s">2  + IP, país, Bearer AEGIX_TOKEN</text>
+        <line x1="500" y1="182" x2="698" y2="182" class="linea" marker-end="url(#m3p)"/>
+        <text x="510" y="176" class="s">3  POST /v1/autorizar (tal cual)</text>
+        <rect x="690" y="192" width="20" height="44" rx="3" class="paso-activo"/>
+        <text x="718" y="210" class="s">4  9 etapas, ≈ 3 ms</text>
+        <text x="718" y="226" class="m">Tor .35 + disp .50 + dest .10 = .95</text>
+        <line x1="710" y1="254" x2="898" y2="254" class="linea" marker-end="url(#m3p)"/>
+        <text x="718" y="248" class="s">5  agrega «retener», ref HMAC</text>
+        <line x1="700" y1="288" x2="102" y2="288" class="linea-r" marker-end="url(#m3r)"/>
+        <text x="300" y="282" class="corte">6  retener + razones → «En revisión»: la plata no sale</text>
+
+        <!-- Fase 2: revisar -->
+        <text x="12" y="330" class="zona">Revisar · el caso aparece en ≤ 2 s</text>
+        <line x1="1100" y1="352" x2="502" y2="352" class="linea" marker-end="url(#m3p)"/>
+        <text x="740" y="346" class="s">7  la consola pide GET /api/alertas cada 2 s</text>
+        <line x1="500" y1="380" x2="698" y2="380" class="linea" marker-end="url(#m3p)"/>
+        <text x="510" y="374" class="s">8  GET /alertas + YUMA_PANEL_TOKEN</text>
+        <line x1="700" y1="408" x2="1098" y2="408" class="linea-vuelta" marker-end="url(#m3p)"/>
+        <text x="740" y="402" class="s">9  el caso: 0,95, razones, monto, origen, hora</text>
+        <line x1="1100" y1="448" x2="502" y2="448" class="linea" marker-end="url(#m3p)"/>
+        <text x="740" y="442" class="s">10  «Liberar operación» y confirmar</text>
+        <line x1="500" y1="476" x2="698" y2="476" class="linea" marker-end="url(#m3p)"/>
+        <text x="510" y="470" class="s">POST /alertas/{ref}/resolucion</text>
+        <line x1="700" y1="504" x2="898" y2="504" class="linea" marker-end="url(#m3p)"/>
+        <text x="710" y="498" class="s">11  agrega «liberar» (409 si ya resuelto)</text>
+
+        <!-- Fase 3: cerrar -->
+        <text x="12" y="548" class="zona">Cerrar · la billetera se entera en ≤ 4 s</text>
+        <line x1="100" y1="572" x2="298" y2="572" class="linea-yuma" marker-end="url(#m3y)"/>
+        <text x="110" y="566" class="s">12  cada 4 s: GET ?id=YW…</text>
+        <line x1="300" y1="600" x2="698" y2="600" class="linea-yuma" marker-end="url(#m3y)"/>
+        <text x="310" y="594" class="s">GET /v1/autorizar/{id} (por la consola)</text>
+        <line x1="700" y1="636" x2="102" y2="636" class="linea-yuma" marker-end="url(#m3y)"/>
+        <text x="300" y="630" class="s" style="fill:var(--yuma);font-weight:650">13  «liberada» → descuenta el saldo y avisa «Aprobada por analista»</text>
+        <text x="110" y="672" class="s">Con «Confirmar fraude» el paso 13 devuelve «fraude_confirmado» y la operación queda bloqueada.</text>
+      </svg>
     </div>
-    <p class="nota">Por Vercel y el túnel se suma la latencia de red, que depende de dónde esté el cliente. No está medida todavía.</p>
+    <figcaption>Nada de esto usa una cola de mensajes: la auditoría es la fuente de verdad y las dos pantallas preguntan con frecuencia (consola cada 2 s, billetera cada 4 s). Si aegix se reinicia, relee la auditoría y la retención sigue pendiente o resuelta como estaba.</figcaption>
+  </figure>
+
+  <!-- 4. Puntaje -->
+  <div class="lectura"><h2 id="puntaje">4. Cómo se calcula el puntaje</h2>
+    <p>Cada señal activa suma su peso. Las franjas de fondo son las zonas de decisión: verde aprobar, ámbar desafiar, rojo retener.</p></div>
+  <div class="puntajes" role="group" aria-label="Tres casos de puntaje">
+    <div class="caso">
+      <div></div>
+      <div class="escala-p" aria-hidden="true"><span style="left:0;transform:none">0</span><span style="left:35%">0,35 desafiar</span><span style="left:65%">0,65 retener</span><span style="left:100%;transform:translateX(-100%)">1</span></div>
+    </div>
+    <div class="caso">
+      <div class="nombre"><b>Pago habitual</b><span>Laura, contacto de siempre</span></div>
+      <div><div class="barra" aria-label="Puntaje 0: ninguna señal"><span class="umbral" style="left:35%"></span><span class="umbral" style="left:65%"></span></div>
+        <span class="resultado" style="--c:var(--ok)">0 · aprobar</span></div>
+    </div>
+    <div class="caso">
+      <div class="nombre"><b>Cuenta mula</b><span>cuenta de 21 días, envía todo a un número nuevo</span></div>
+      <div><div class="barra" aria-label="Cuenta nueva 0,15, monto sobre saldo 0,20 y destino nuevo 0,10 suman 0,45">
+          <span class="seg" style="left:0;width:15%">cuenta .15</span><span class="seg" style="left:15%;width:20%">saldo .20</span><span class="seg" style="left:35%;width:10%">dest .10</span>
+          <span class="umbral" style="left:35%"></span><span class="umbral" style="left:65%"></span></div>
+        <span class="resultado" style="--c:var(--alerta)">0,45 · desafiar: se pide un código</span></div>
+    </div>
+    <div class="caso">
+      <div class="nombre"><b>Toma de cuenta</b><span>Tor + dispositivo nuevo + destino nuevo</span></div>
+      <div><div class="barra" aria-label="Dispositivo nuevo 0,50, Tor 0,35 y destino nuevo 0,10 suman 0,95">
+          <span class="seg" style="left:0;width:50%">dispositivo nuevo .50</span><span class="seg" style="left:50%;width:35%">Tor .35</span><span class="seg" style="left:85%;width:10%">dest .10</span>
+          <span class="umbral" style="left:35%"></span><span class="umbral" style="left:65%"></span></div>
+        <span class="resultado" style="--c:var(--retener)">0,95 · retener: el dispositivo es señal ajena al origen</span></div>
+    </div>
+    <div class="caso">
+      <div class="nombre"><b>Viajero con VPN</b><span>Tor + país nuevo + departamento distinto</span></div>
+      <div><div class="barra" aria-label="Tor 0,35, país nuevo 0,15 y departamento 0,10 suman 0,60, todas señales de origen">
+          <span class="seg" style="left:0;width:35%">Tor .35</span><span class="seg" style="left:35%;width:15%">país .15</span><span class="seg" style="left:50%;width:10%">depto .10</span>
+          <span class="umbral" style="left:35%"></span><span class="umbral" style="left:65%"></span></div>
+        <span class="resultado" style="--c:var(--alerta)">0,60 · desafiar: solo señales de origen, nunca retienen</span></div>
+    </div>
   </div>
 
-  <div class="lectura"><h2>Qué hace Yuma con cada decisión</h2>
-    <p>aegix nunca mueve dinero ni ve saldos. Devuelve una decisión, un puntaje de 0 a 1 y sus razones, y la billetera actúa.</p></div>
   <div class="tabla"><table>
-    <thead><tr><th>Decisión</th><th>Cuándo</th><th>Qué hace la billetera</th><th>Quién revisa</th></tr></thead>
+    <thead><tr><th>Señal</th><th>Peso</th><th>Lift en los datos</th><th>De dónde sale</th></tr></thead>
     <tbody>
-      <tr><td><span class="decision" style="--c:var(--ok)">aprobar</span></td><td>puntaje menor que 0,35</td><td>Descuenta el saldo sin pasos extra</td><td>Nadie</td></tr>
-      <tr><td><span class="decision" style="--c:var(--alerta)">desafiar</span></td><td>desde 0,35, o al agotarse el plazo</td><td>Pide un código de un solo uso; si es correcto, descuenta</td><td>El propio cliente</td></tr>
-      <tr><td><span class="decision" style="--c:var(--retener)">retener</span></td><td>desde 0,65 y con una señal ajena al origen</td><td>La plata no sale; la operación queda en revisión</td><td>Un analista, desde el panel</td></tr>
-      <tr><td><span class="decision" style="--c:var(--rechazo)">rechazar</span></td><td>solicitud inválida o ráfaga</td><td>No mueve dinero y muestra el motivo</td><td>Nadie; queda auditado</td></tr>
+      <tr><td>Dispositivo nuevo (24 h)</td><td><span class="peso"><i style="--p:.5"></i>0,50</span></td><td>18,2×</td><td>La transacción</td></tr>
+      <tr><td>Conexión por Tor</td><td><span class="peso"><i style="--p:.35"></i>0,35</span></td><td>—</td><td>Origen; criterio experto</td></tr>
+      <tr><td>Cambio de clave (24 h)</td><td><span class="peso"><i style="--p:.3"></i>0,30</span></td><td>19,6×</td><td>La transacción</td></tr>
+      <tr><td>Cambio de SIM (48 h)</td><td><span class="peso"><i style="--p:.25"></i>0,25</span></td><td>22,1×</td><td>La transacción</td></tr>
+      <tr><td>2+ operaciones en 10 min</td><td><span class="peso"><i style="--p:.25"></i>0,25</span></td><td>33,8×</td><td>Historial del cliente</td></tr>
+      <tr><td>Monto ≥ 75 % del saldo</td><td><span class="peso"><i style="--p:.2"></i>0,20</span></td><td>7,1×</td><td>La transacción</td></tr>
+      <tr><td>Cuenta de menos de 30 días</td><td><span class="peso"><i style="--p:.15"></i>0,15</span></td><td>10,9×</td><td>La transacción</td></tr>
+      <tr><td>País nuevo para el cliente</td><td><span class="peso"><i style="--p:.15"></i>0,15</span></td><td>—</td><td>Origen e historial; criterio experto</td></tr>
+      <tr><td>Destino nuevo</td><td><span class="peso"><i style="--p:.1"></i>0,10</span></td><td>4,5×</td><td>La transacción</td></tr>
+      <tr><td>Departamento distinto</td><td><span class="peso"><i style="--p:.1"></i>0,10</span></td><td>6,4×</td><td>Origen; compara al cliente consigo mismo</td></tr>
+      <tr><td>Proxy o centro de datos</td><td><span class="peso"><i style="--p:.1"></i>0,10</span></td><td>—</td><td>Origen; criterio experto</td></tr>
+      <tr><td>Hora atípica</td><td><span class="peso"><i style="--p:.05"></i>0,05</span></td><td>0,5×</td><td>Historial; solo desempata</td></tr>
     </tbody>
   </table></div>
-  <p class="nota lectura">Ningún bloqueo definitivo de cuenta es automático, como exige el reto: la decisión más fuerte por riesgo es retener y siempre pasa por un analista.</p>
+  <p class="nota lectura">Lift: cuántas veces más frecuente es el fraude con la señal activa que en promedio (1,41 %). «Monto alto frente al historial» se retiró en etapa-5.3: su lift es 0,2, porque el fraude vacía el saldo en vez de superar el monto habitual. Ninguna regla usa región, edad ni ingresos.</p>
 
-  <div class="lectura"><h2>Señales y pesos</h2>
-    <p>Calibrados con mayo a agosto y validados con septiembre y octubre, meses que el ajuste no vio. Con aegix y el sandbox sobre los seis meses: 81,6 % de fraude detectado frente al 62,6 % de la línea base, y 22 % de falsos positivos frente al 89 %.</p></div>
+  <!-- 5. Ciclo -->
+  <div class="lectura"><h2 id="ciclo">5. El ciclo del analista: cada caso resuelto enseña</h2>
+    <p>Liberar marca un falso positivo; confirmar fraude, un fraude. Esas etiquetas entran a la próxima calibración junto con el histórico, y las reglas nuevas se cargan sin reiniciar.</p></div>
+  <figure>
+    <div class="lienzo">
+      <svg viewBox="0 0 1200 250" role="img" aria-label="Ciclo: aegix retiene, el analista libera o confirma fraude, la auditoría guarda la etiqueta, etiquetas_analista.py la convierte en un ejemplo con sus señales, calibrar_reglas.py ajusta pesos con el histórico y valida con septiembre y octubre, y reglas.yaml vuelve a aegix con recarga en caliente.">
+        <defs>
+          <marker id="m5p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="flecha-p"/></marker>
+        </defs>
+        <rect x="14" y="30" width="172" height="104" rx="10" class="nodo-fuerte"/>
+        <text x="100" y="58" text-anchor="middle" class="t">aegix retiene</text>
+        <text x="100" y="78" text-anchor="middle" class="s">puntaje ≥ 0,65 con</text>
+        <text x="100" y="94" text-anchor="middle" class="s">señal ajena al origen</text>
+        <rect x="214" y="30" width="172" height="104" rx="10" class="nodo"/>
+        <text x="300" y="58" text-anchor="middle" class="t">Analista resuelve</text>
+        <text x="300" y="78" text-anchor="middle" class="s">liberar = legítima</text>
+        <text x="300" y="94" text-anchor="middle" class="s">confirmar = fraude</text>
+        <rect x="414" y="30" width="172" height="104" rx="10" class="disco"/>
+        <text x="500" y="58" text-anchor="middle" class="t">Auditoría</text>
+        <text x="500" y="78" text-anchor="middle" class="s">decisión + resolución</text>
+        <text x="500" y="94" text-anchor="middle" class="s">con la misma ref HMAC</text>
+        <rect x="614" y="30" width="172" height="104" rx="10" class="nodo"/>
+        <text x="700" y="58" text-anchor="middle" class="m">etiquetas_analista.py</text>
+        <text x="700" y="78" text-anchor="middle" class="s">razones → señales</text>
+        <text x="700" y="94" text-anchor="middle" class="s">activas + etiqueta</text>
+        <rect x="814" y="30" width="172" height="104" rx="10" class="nodo"/>
+        <text x="900" y="58" text-anchor="middle" class="m">calibrar_reglas.py</text>
+        <text x="900" y="78" text-anchor="middle" class="s">CSV may–ago + casos × 10</text>
+        <text x="900" y="94" text-anchor="middle" class="s">valida con sep–oct</text>
+        <text x="900" y="110" text-anchor="middle" class="s">fricción ≤ 3 %</text>
+        <rect x="1014" y="30" width="172" height="104" rx="10" class="disco"/>
+        <text x="1100" y="58" text-anchor="middle" class="m">config/reglas.yaml</text>
+        <text x="1100" y="78" text-anchor="middle" class="s">nueva versión</text>
+        <text x="1100" y="94" text-anchor="middle" class="s">si mejora la validación</text>
+        <line x1="186" y1="82" x2="212" y2="82" class="linea" marker-end="url(#m5p)"/>
+        <line x1="386" y1="82" x2="412" y2="82" class="linea" marker-end="url(#m5p)"/>
+        <line x1="586" y1="82" x2="612" y2="82" class="linea" marker-end="url(#m5p)"/>
+        <line x1="786" y1="82" x2="812" y2="82" class="linea" marker-end="url(#m5p)"/>
+        <line x1="986" y1="82" x2="1012" y2="82" class="linea" marker-end="url(#m5p)"/>
+        <path d="M1100 136 V196 H100 V138" class="linea-vuelta" marker-end="url(#m5p)"/>
+        <text x="600" y="218" text-anchor="middle" class="s">recarga en caliente: aegix detecta el archivo, lo valida y cambia de versión sin reiniciar ni perder solicitudes</text>
+      </svg>
+    </div>
+    <figcaption>Solo hay etiquetas de lo que se retuvo, así que el ciclo corrige sobre todo los falsos positivos. El fraude que se aprobó sigue llegando por las etiquetas del histórico (<code>es_fraude</code>). Hoy el paso de <code>calibrar_reglas.py</code> a <code>reglas.yaml</code> lo hace una persona: así ningún cambio de pesos entra sin revisión.</figcaption>
+  </figure>
+
+  <!-- 6. Datos -->
+  <div class="lectura"><h2 id="datos">6. Datos y seguridad</h2>
+    <p>Qué se guarda, dónde y quién puede verlo.</p></div>
   <div class="tabla"><table>
-    <thead><tr><th>Señal</th><th>Peso</th><th>De dónde sale</th></tr></thead>
+    <thead><tr><th>Dato</th><th>Dónde vive</th><th>Protección</th><th>En GitHub</th></tr></thead>
     <tbody>
-      <tr><td>Dispositivo nuevo</td><td><span class="peso"><i style="--p:.5"></i>0,50</span></td><td>La transacción</td></tr>
-      <tr><td>Conexión por Tor</td><td><span class="peso"><i style="--p:.35"></i>0,35</span></td><td>Origen; criterio experto, no está en los datos</td></tr>
-      <tr><td>Cambio de clave en 24 h</td><td><span class="peso"><i style="--p:.3"></i>0,30</span></td><td>La transacción</td></tr>
-      <tr><td>Cambio de SIM en 48 h</td><td><span class="peso"><i style="--p:.25"></i>0,25</span></td><td>La transacción</td></tr>
-      <tr><td>Dos o más operaciones en 10 min</td><td><span class="peso"><i style="--p:.25"></i>0,25</span></td><td>Historial del cliente</td></tr>
-      <tr><td>Monto ≥ 1,25 × su percentil 95</td><td><span class="peso"><i style="--p:.2"></i>0,20</span></td><td>Historial del cliente</td></tr>
-      <tr><td>Monto ≥ 75 % del saldo</td><td><span class="peso"><i style="--p:.2"></i>0,20</span></td><td>La transacción</td></tr>
-      <tr><td>Cuenta con menos de 30 días</td><td><span class="peso"><i style="--p:.15"></i>0,15</span></td><td>La transacción; patrón de cuenta mula</td></tr>
-      <tr><td>País nuevo para el cliente</td><td><span class="peso"><i style="--p:.15"></i>0,15</span></td><td>Origen e historial</td></tr>
-      <tr><td>Destino nuevo</td><td><span class="peso"><i style="--p:.1"></i>0,10</span></td><td>La transacción</td></tr>
-      <tr><td>Departamento distinto al habitual</td><td><span class="peso"><i style="--p:.1"></i>0,10</span></td><td>Origen; compara con el propio cliente</td></tr>
-      <tr><td>Hora atípica para el cliente</td><td><span class="peso"><i style="--p:.1"></i>0,10</span></td><td>Historial del cliente</td></tr>
-      <tr><td>Proxy o centro de datos</td><td><span class="peso"><i style="--p:.1"></i>0,10</span></td><td>Origen</td></tr>
+      <tr><td>Saldos y movimientos de la demo</td><td><code>localStorage</code> del navegador del cliente</td><td>Nunca sale del navegador; aegix no ve saldos guardados, solo el de la operación</td><td>No aplica</td></tr>
+      <tr><td>Auditoría de decisiones</td><td><code>datos/decisiones.jsonl</code></td><td>Solo agrega. El id de la operación se guarda como HMAC-SHA256. Se archiva, nunca se borra</td><td>No (<code>.gitignore</code>)</td></tr>
+      <tr><td>Clave HMAC</td><td><code>datos/decisiones.jsonl.clave</code> o <code>YUMA_AUDIT_KEY</code></td><td>Permisos 0600; sin ella las referencias no se pueden recalcular</td><td>No</td></tr>
+      <tr><td><code>YUMA_PANEL_TOKEN</code> / <code>AEGIX_TOKEN</code></td><td>Variable de entorno en el equipo y en Vercel</td><td>Bearer entre la billetera y aegix; nunca llega al navegador</td><td>No</td></tr>
+      <tr><td><code>YUMA_PANEL_CLAVE</code></td><td>Variable de entorno en el equipo</td><td>Contraseña del panel; se compara en tiempo constante</td><td>No</td></tr>
+      <tr><td>Historial por cliente</td><td>Memoria de aegix</td><td>Se pierde al reiniciar; no se escribe a disco</td><td>No aplica</td></tr>
+      <tr><td>Reglas</td><td><code>config/reglas.yaml</code></td><td>Validadas al cargar; un archivo inválido se ignora</td><td>Sí</td></tr>
+      <tr><td>Datos y documentos del reto</td><td>Fuera del repositorio</td><td>Son de los organizadores</td><td>No</td></tr>
     </tbody>
   </table></div>
-  <p class="nota lectura">Las señales de origen y horario solas nunca bastan para retener. Ninguna regla usa región, edad ni ingresos: «departamento distinto» compara al cliente consigo mismo y «cuenta nueva» mide la antigüedad de la cuenta, no la de la persona.</p>
+  <p class="nota lectura">Ningún bloqueo definitivo de cuenta es automático, como exige el reto: la decisión más fuerte por riesgo es retener, y siempre la revisa un analista.</p>
 
-  <div class="lectura"><h2>Frente a la arquitectura objetivo de Yuma Pay</h2>
+  <!-- 7. Rutas -->
+  <div class="lectura"><h2 id="rutas">7. Rutas de aegix</h2></div>
+  <div class="tabla"><table>
+    <thead><tr><th>Ruta</th><th>Quién la usa</th><th>Clave</th><th>Desde internet</th></tr></thead>
+    <tbody>
+      <tr><td><code>POST /v1/autorizar</code></td><td>Función de Vercel de la billetera</td><td>Bearer</td><td>Sí, por la consola</td></tr>
+      <tr><td><code>GET /v1/autorizar/{id}</code></td><td>La billetera pregunta si la liberaron</td><td>Bearer</td><td>Sí, por la consola</td></tr>
+      <tr><td><code>GET /salud</code></td><td>Comprobación de vida</td><td>No</td><td>Sí</td></tr>
+      <tr><td><code>POST /score</code></td><td>Simulador del reto</td><td>No</td><td>No</td></tr>
+      <tr><td><code>GET /alertas</code>, <code>/decisiones</code>, <code>/indicadores</code></td><td>Consola: cola, actividad, indicadores</td><td>Bearer</td><td>Solo con contraseña</td></tr>
+      <tr><td><code>POST /alertas/{ref}/resolucion</code></td><td>Analista: liberar o confirmar fraude</td><td>Bearer</td><td>Solo con contraseña</td></tr>
+      <tr><td><code>GET /metricas</code>, <code>/metrics</code></td><td>Consola y Prometheus</td><td>No</td><td>Solo con contraseña</td></tr>
+    </tbody>
+  </table></div>
+
+  <!-- 8. Resultados -->
+  <div class="lectura"><h2 id="resultados">8. Resultados medidos</h2>
+    <p>Las 120.972 transacciones del reto pasadas por aegix y calificadas por el sandbox, con 4 clientes en paralelo. Detalle y método en <code>docs/reporte-indicadores.md</code>.</p></div>
+  <div class="medidas">
+    <div class="medida"><b id="r-det">81,5 %</b><span>fraude detectado; la línea base detecta 62,6 % y después de autorizar</span></div>
+    <div class="medida"><b id="r-fp">17,7 %</b><span>falsos positivos; el motor actual tiene 89 %</span></div>
+    <div class="medida"><b id="r-p99">5,3 ms</b><span>p99 de latencia; el límite es 300 ms</span></div>
+    <div class="medida"><b id="r-tps">1.100+ TPS</b><span>sostenidos sin errores; el pico exigido es 150</span></div>
+  </div>
+
+  <!-- 9. Objetivo -->
+  <div class="lectura"><h2 id="objetivo">9. Frente a la arquitectura objetivo de Yuma Pay</h2>
     <p>Cada pieza del diagrama del reto y qué la cumple hoy.</p></div>
   <div class="tabla"><table>
     <thead><tr><th>Pieza del reto</th><th>Hoy</th><th>Estado</th></tr></thead>
     <tbody>
       <tr><td>Orquestador de transacciones</td><td>Función <code>/api/autorizar</code> en Vercel: pide la decisión antes de mover dinero</td><td><span class="estado hecho">Construido</span></td></tr>
-      <tr><td>Servicio de decisión de riesgo</td><td>aegix: <code>/v1/autorizar</code> y <code>/score</code>, 4 decisiones con razones</td><td><span class="estado hecho">Construido</span></td></tr>
-      <tr><td>Motor de reglas en tiempo real</td><td><code>reglas.yaml</code> etapa-5.2, recarga sin reiniciar</td><td><span class="estado hecho">Construido</span></td></tr>
-      <tr><td>Perfil de comportamiento</td><td>Historial por cliente en memoria: percentil, hora habitual, ráfagas, país</td><td><span class="estado hecho">Construido</span></td></tr>
+      <tr><td>Servicio de decisión de riesgo</td><td>aegix: <code>/v1/autorizar</code> y <code>/score</code>, cuatro decisiones con razones</td><td><span class="estado hecho">Construido</span></td></tr>
+      <tr><td>Motor de reglas en tiempo real</td><td><code>reglas.yaml</code> etapa-5.3, recarga sin reiniciar</td><td><span class="estado hecho">Construido</span></td></tr>
+      <tr><td>Perfil de comportamiento</td><td>Historial por cliente en memoria: hora habitual, ráfagas, países</td><td><span class="estado hecho">Construido</span></td></tr>
       <tr><td>Autenticación adaptativa</td><td>Código de un solo uso cuando aegix pide desafío</td><td><span class="estado parcial">Simulado</span></td></tr>
-      <tr><td>Gestión de casos</td><td>Panel en vivo: el analista libera o confirma fraude, queda en la auditoría y la billetera lo ve en segundos</td><td><span class="estado hecho">Construido</span></td></tr>
-      <tr><td>Etiquetas confirmadas</td><td>Cada resolución se guarda como falso positivo o fraude confirmado; falta usarlas para recalibrar en automático</td><td><span class="estado parcial">Parcial</span></td></tr>
-      <tr><td>Auditoría</td><td>JSONL de solo agregar con referencias HMAC</td><td><span class="estado hecho">Construido</span></td></tr>
-      <tr><td>Observabilidad</td><td><code>/metrics</code> para Prometheus con histograma de latencia; falta el tablero de Grafana</td><td><span class="estado parcial">Parcial</span></td></tr>
+      <tr><td>Gestión de casos</td><td>Consola en vivo: el analista libera o confirma fraude y la billetera lo ve en segundos</td><td><span class="estado hecho">Construido</span></td></tr>
+      <tr><td>Etiquetas confirmadas</td><td>Cada resolución alimenta la calibración (<code>--auditoria</code>); la publicación de reglas la aprueba una persona</td><td><span class="estado hecho">Construido</span></td></tr>
+      <tr><td>Auditoría</td><td>JSONL de solo agregar con referencias HMAC, archivada entre demos</td><td><span class="estado hecho">Construido</span></td></tr>
+      <tr><td>Observabilidad</td><td>Consola con pulso, latencia y SLA; <code>/metrics</code> listo para Prometheus</td><td><span class="estado parcial">Parcial</span></td></tr>
       <tr><td>Origen real (GeoIP y Tor)</td><td>Modo <code>-geoip -tor</code> implementado; falta la base MMDB y la lista pública de nodos</td><td><span class="estado parcial">Parcial</span></td></tr>
-      <tr><td>Modelo de aprendizaje automático</td><td>Comparar contra las reglas con la misma validación temporal</td><td><span class="estado futuro">Siguiente fase</span></td></tr>
-      <tr><td>Bus de eventos y retroalimentación</td><td>RabbitMQ para alertas y etiquetas confirmadas por analistas</td><td><span class="estado futuro">Siguiente fase</span></td></tr>
-      <tr><td>Análisis de redes de mulas</td><td>Hoy se cubre con la señal de cuenta nueva</td><td><span class="estado futuro">Siguiente fase</span></td></tr>
+      <tr><td>Modelo de aprendizaje automático</td><td>Compararlo contra las reglas con la misma validación temporal</td><td><span class="estado futuro">Siguiente fase</span></td></tr>
+      <tr><td>Bus de eventos</td><td>RabbitMQ si hubiera varios consumidores; hoy la auditoría cumple ese papel</td><td><span class="estado futuro">Siguiente fase</span></td></tr>
     </tbody>
   </table></div>
-
-  <div class="lectura"><h2>Datos y seguridad</h2>
-    <p>Entre la billetera y aegix todo viaja por HTTPS. La URL y la clave de aegix viven solo en el servidor de Vercel. <code>/v1/autorizar</code>, <code>/alertas</code> e <code>/indicadores</code> exigen la clave cuando <code>YUMA_PANEL_TOKEN</code> está definida. La auditoría guarda referencias HMAC en vez de identificadores. Solo se usan los datos sintéticos del reto, y para decidir aegix usa únicamente operaciones anteriores a la que evalúa.</p>
-  </div>
 </div>

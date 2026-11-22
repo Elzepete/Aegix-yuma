@@ -9,6 +9,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"sync/atomic"
@@ -41,8 +42,25 @@ type Config struct {
 	MinMontos      int              `yaml:"min_montos"`
 	MinutosSalidas int              `yaml:"minutos_salidas"`
 	// Antigüedad (días) por debajo de la cual la cuenta cuenta como nueva; 0 desactiva la señal.
-	DiasCuentaNueva int     `yaml:"dias_cuenta_nueva"`
-	Reglas          []regla `yaml:"reglas"`
+	DiasCuentaNueva int `yaml:"dias_cuenta_nueva"`
+	// Operaciones en las que el dinero no sale hacia un tercero (recargas, servicios). En los datos del reto no
+	// tienen ni un fraude: su decisión baja un escalón para no frenar a clientes legítimos.
+	TiposBajoRiesgo []string `yaml:"tipos_bajo_riesgo"`
+	Reglas          []regla  `yaml:"reglas"`
+}
+
+// Ajustar baja un escalón la decisión de los tipos de bajo riesgo: retener pasa a desafiar y desafiar a aprobar.
+func (c *Config) Ajustar(tipo, accion string, razones []string) (string, []string) {
+	if !slices.Contains(c.TiposBajoRiesgo, tipo) {
+		return accion, razones
+	}
+	switch accion {
+	case "retener":
+		return "desafiar", append(razones, "operación de bajo riesgo: se verifica la identidad en lugar de retener")
+	case "desafiar":
+		return "aprobar", razones
+	}
+	return accion, razones
 }
 
 type Motor struct {
@@ -126,6 +144,11 @@ func leer(ruta string) (Config, [32]byte, error) {
 	}
 	if err := cfg.Umbrales.Validar(); err != nil {
 		return cfg, huella, err
+	}
+	for _, tipo := range cfg.TiposBajoRiesgo {
+		if strings.TrimSpace(tipo) == "" {
+			return cfg, huella, fmt.Errorf("tipos_bajo_riesgo no admite valores vacíos")
+		}
 	}
 	vistas := make(map[string]bool)
 	for _, r := range cfg.Reglas {

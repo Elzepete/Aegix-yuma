@@ -315,7 +315,7 @@ function vSeguridad() {
         <button class="ficha" data-accion="escenario" data-nombre="sim">SIM swapping</button>
         <button class="ficha" data-accion="escenario" data-nombre="toma">Toma de cuenta</button>
       </div>
-      <p class="suave pequeno">«SIM swapping» pide código con un contacto y retiene con un número nuevo. «Toma de cuenta» retiene cualquier envío.</p>
+      <p class="suave pequeno">«SIM swapping» pide código con un contacto y retiene con un número nuevo. «Toma de cuenta» retiene cualquier envío; en recargas y pagos de servicios solo pide código.</p>
     </div>
     <div class="tarjeta">
       ${SENALES.map((s) => `

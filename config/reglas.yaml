@@ -4,17 +4,22 @@
 # fricción a clientes legítimos 3,4 %, legítimos retenidos 0,4 %.
 # Con aegix + sandbox sobre los seis meses: detectado 81,6 %, falsos positivos 22,0 %, monto protegido 87,1 %.
 # tor, proxy y pais_nuevo no aparecen en los datos del reto: sus pesos son criterio experto.
-version: etapa-5.2
+# etapa-5.3 (falsos positivos): hora_atipica 0,10 → 0,05 y se retira monto_sobre_percentil; en mayo–agosto su lift
+# es 0,39 y 0,23 (el fraude no se concentra de madrugada ni supera el monto habitual: vacía el saldo).
+# Más tipos_bajo_riesgo. Ver docs/reporte-indicadores.md.
+version: etapa-5.3
 umbrales: {desafiar: 0.35, retener: 0.65}
 dias_monto: 30
 percentil: 95
 min_montos: 10
 minutos_salidas: 10
 dias_cuenta_nueva: 30
+# Sin un solo fraude en los seis meses de datos: aquí la decisión baja un escalón (retener → desafiar, desafiar → aprobar).
+tipos_bajo_riesgo: [recarga_celular, pago_servicios, compra_tarjeta_virtual]
 reglas:
   - {senal: tor, peso: 0.35, razon: "conexión por un nodo de salida Tor"}
   - {senal: proxy, peso: 0.10, razon: "conexión desde un proxy o centro de datos"}
-  - {senal: hora_atipica, peso: 0.10, razon: "hora atípica para este cliente"}
+  - {senal: hora_atipica, peso: 0.05, razon: "hora atípica para este cliente"}
   - {senal: pais_nuevo, peso: 0.15, razon: "país de conexión fuera del historial del cliente"}
   - {senal: departamento_distinto, peso: 0.10, razon: "conexión desde un departamento distinto al habitual"}
   - {senal: dispositivo_nuevo, peso: 0.50, razon: "dispositivo nuevo"}
@@ -22,6 +27,5 @@ reglas:
   - {senal: cambio_clave, peso: 0.30, razon: "cambio reciente de clave"}
   - {senal: destino_nuevo, peso: 0.10, razon: "destino nuevo"}
   - {senal: cuenta_nueva, peso: 0.15, razon: "cuenta con menos de 30 días"}
-  - {senal: monto_sobre_percentil, umbral: 1.25, peso: 0.20, razon: "monto elevado frente al percentil histórico del cliente"}
   - {senal: monto_sobre_saldo, umbral: 0.75, peso: 0.20, razon: "monto elevado frente al saldo disponible"}
   - {senal: salidas_recientes, umbral: 2, peso: 0.25, razon: "varias operaciones del cliente en los últimos 10 minutos"}

@@ -35,24 +35,9 @@ node --test
 
 ## Publicar gratis
 
-**1. Exponer aegix con un túnel** (gratis, sin cuenta). aegix sigue escuchando solo en 127.0.0.1:
-
-```bash
-YUMA_PANEL_TOKEN=una-clave-larga go run ./cmd/intermediario
-cloudflared tunnel --url http://127.0.0.1:8081   # imprime https://algo.trycloudflare.com
-```
-
-Con `YUMA_PANEL_TOKEN`, aegix exige la clave en `/v1/autorizar`, `/alertas` e `/indicadores`.
-`/score`, `/metricas` y `/metrics` siguen abiertos a través del túnel.
-
-**2. Desplegar la billetera en Vercel** (plan Hobby gratuito):
-
-- Sube el repo a GitHub → en vercel.com, *Add New → Project* → importa el repo.
-- *Root Directory*: `yuma-billetera`. *Framework Preset*: `Other`. Sin comando de build.
-- *Environment Variables*: `AEGIX_URL` = la URL del túnel, `AEGIX_TOKEN` = el mismo valor de `YUMA_PANEL_TOKEN`.
-- Deploy. (Alternativa por terminal: `npx vercel` dentro de esta carpeta.)
-
-La URL de un túnel rápido cambia cada vez que lo reinicias: actualiza `AEGIX_URL` y vuelve a desplegar.
+Paso a paso en [docs/despliegue.md](../docs/despliegue.md). En resumen: la billetera va a Vercel
+(*Root Directory* `yuma-billetera`, variables `AEGIX_URL` y `AEGIX_TOKEN`) y `AEGIX_URL` apunta al túnel con
+dirección fija de la consola del operador, que reenvía solo `/v1/autorizar` y `/salud` hacia aegix.
 Si aegix está apagado, la billetera muestra «aegix sin conexión» y no autoriza nada.
 
 ## Guion de demo
@@ -61,6 +46,7 @@ Si aegix está apagado, la billetera muestra «aegix sin conexión» y no autori
 2. *Seguridad → SIM swapping*, envío a Andrés → **desafiar** con código; el mismo envío a un número nuevo → **retener**.
 3. *Seguridad → Toma de cuenta*, cualquier envío → **retener** (Tor + dispositivo nuevo + SIM).
 4. *Todo normal*, ingresa como Julián (cuenta de 21 días) y envía «Todo» a un número nuevo → **desafiar**: patrón de cuenta mula.
+   (Recargas y pagos de servicios con las mismas señales solo piden código: son de bajo riesgo.)
 5. En el panel del operador abre la retención del paso 3 y pulsa *Liberar operación*: en segundos la billetera
    la marca «Aprobada por analista», descuenta y avisa. Con *Confirmar fraude* queda «Bloqueada por fraude».
 6. Muestra `/metricas` de aegix: las tres decisiones aparecen en `decisiones_por_origen.billetera`.

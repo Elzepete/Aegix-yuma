@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { access, stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
@@ -33,7 +34,51 @@ function error(response, status, message) {
   json(response, status, { error: message });
 }
 
-export function createPanelHandler({ engine, sandbox, token, request = fetch }) {
+// Rutas que usa la función de Vercel de la billetera: aegix exige su propio Bearer, así que no piden la clave del panel.
+const BILLETERA = /^\/(salud|v1\/autorizar(\/YW[A-Z0-9]{4,40})?)$/;
+
+const resumen = (texto) => createHash('sha256').update(texto).digest();
+function claveCorrecta(cabecera, clave) {
+  const [tipo, valor] = (cabecera ?? '').split(' ');
+  if (tipo !== 'Basic' || !valor) return false;
+  const texto = Buffer.from(valor, 'base64').toString('utf8');
+  // Cualquier usuario sirve; solo cuenta la contraseña.
+  return timingSafeEqual(resumen(texto.slice(texto.indexOf(':') + 1)), resumen(clave));
+}
+
+async function reenviarBilletera(req, res, pathname, engine, request) {
+  const metodo = pathname === '/v1/autorizar' ? 'POST' : 'GET';
+  if (req.method !== metodo) {
+    res.setHeader('Allow', metodo);
+    return error(res, 405, 'Método no permitido');
+  }
+  let cuerpo;
+  if (metodo === 'POST') {
+    cuerpo = '';
+    for await (const parte of req) {
+      cuerpo += parte;
+      if (cuerpo.length > 16 * 1024) return error(res, 413, 'Solicitud demasiado grande');
+    }
+  }
+  try {
+    const upstream = await request(new URL(pathname, engine), {
+      method: metodo,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(req.headers.authorization ? { Authorization: req.headers.authorization } : {}),
+      },
+      body: cuerpo,
+      redirect: 'error',
+      signal: AbortSignal.timeout(2500),
+    });
+    res.writeHead(upstream.status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+    return res.end(await upstream.text());
+  } catch {
+    return error(res, 502, 'Motor Go no disponible');
+  }
+}
+
+export function createPanelHandler({ engine, sandbox, token, clave, request = fetch }) {
   let pruebaEnCurso = false;
   return async (req, res) => {
     let pathname;
@@ -41,6 +86,14 @@ export function createPanelHandler({ engine, sandbox, token, request = fetch }) 
       pathname = decodeURIComponent(req.url.split('?')[0]);
     } catch {
       return error(res, 400, 'Ruta inválida');
+    }
+    if (BILLETERA.test(pathname)) return reenviarBilletera(req, res, pathname, engine, request);
+    if (clave && !claveCorrecta(req.headers.authorization, clave)) {
+      res.writeHead(401, {
+        'WWW-Authenticate': 'Basic realm="Consola aegix", charset="UTF-8"',
+        'Content-Type': 'text/plain; charset=utf-8',
+      });
+      return res.end('Escribe la contraseña del panel (variable YUMA_PANEL_CLAVE).');
     }
     if (pathname === '/api/prueba-transacciones') {
       if (req.method !== 'POST') {
@@ -155,7 +208,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const engine = localUrl(process.env.YUMA_GO_URL ?? 'http://127.0.0.1:8081', 'YUMA_GO_URL');
   const sandbox = process.env.YUMA_SANDBOX_URL &&
     localUrl(process.env.YUMA_SANDBOX_URL, 'YUMA_SANDBOX_URL');
-  const server = createServer(createPanelHandler({ engine, sandbox, token: process.env.YUMA_PANEL_TOKEN }));
+  const clave = process.env.YUMA_PANEL_CLAVE;
+  if (!clave) console.warn('Panel sin contraseña: define YUMA_PANEL_CLAVE antes de exponerlo con un túnel.');
+  const server = createServer(createPanelHandler({ engine, sandbox, token: process.env.YUMA_PANEL_TOKEN, clave }));
   server.listen(port, '127.0.0.1', () => {
     console.log(`Panel Etapa 5 en http://127.0.0.1:${server.address().port}`);
   });

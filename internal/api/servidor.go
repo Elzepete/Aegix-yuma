@@ -314,6 +314,7 @@ func puntuar(ctx context.Context, proveedor contexto.Proveedor, historial *conte
 	}
 	puntaje, razones, otraSenal := reglasActivas.Evaluar(v)
 	accion, razones := reglasActivas.Umbrales.Decidir(puntaje, otraSenal, razones)
+	accion, razones = reglasActivas.Ajustar(t.TipoOperacion, accion, razones)
 	return sandbox.Decision{ID: t.ID, Accion: accion, Puntaje: puntaje, Razones: razones}, nil
 }
 
