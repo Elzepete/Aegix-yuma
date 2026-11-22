@@ -1,23 +1,20 @@
-# Panel local de Escudo Yuma · Etapa 5
+# Consola aegix
 
-Desde esta carpeta, instala las dependencias y compila con una versión compatible de Node y npm.
+Panel del operador: actividad en vivo, cola de casos, liberar o confirmar fraude, pulso, señales y latencia.
+React + Vite; `proxy.mjs` (solo módulos de Node) sirve la compilación y reenvía a aegix.
 
-```sh
-npm install
-npm run build
-python3 demo.py
+```bash
+npm ci && npm run build
+npm start                 # http://127.0.0.1:4173, aegix en http://127.0.0.1:8081
+npm test && npm run lint  # pruebas del servidor y TypeScript
 ```
 
-Abre http://127.0.0.1:4173 y pulsa **Ejecutar dos transacciones de prueba**.
-Selecciona una fila para ver las razones que devolvió Go. Los indicadores y las
-alertas se actualizan al terminar. El arranque también verifica la retención de la operación sintética
-`T00001087` con contexto Tor simulado. Verifica la confirmación en Go y comprueba
-que el proxy devuelve las mismas alertas e indicadores. Pulsa Ctrl+C para detener
-los tres procesos. Si el puerto 4173 está ocupado, elige otro con
-`YUMA_PANEL_PORT=4174 python3 demo.py`.
+| Variable | Para qué |
+| --- | --- |
+| `YUMA_GO_URL` | dirección de aegix (solo 127.0.0.1); por defecto `http://127.0.0.1:8081` |
+| `YUMA_PANEL_TOKEN` | Bearer hacia aegix, si aegix lo exige |
+| `YUMA_PANEL_CLAVE` | contraseña de la consola en el navegador; obligatoria si la expones por un túnel |
+| `YUMA_PANEL_PORT`, `YUMA_PANEL_HOST` | puerto (4173) y dirección de escucha (127.0.0.1; 0.0.0.0 en Docker) |
 
-Con Go iniciado por separado, ejecuta `npm start`. El proxy apunta a
-`http://127.0.0.1:8081` por defecto. Puedes configurar `YUMA_GO_URL` y, si
-Go exige autenticación para el panel, el mismo `YUMA_PANEL_TOKEN` en ambos
-procesos. El navegador consulta `/api/alertas` y `/api/indicadores`; Node
-reenvía esas consultas a `/alertas` y `/indicadores` de Go.
+`python3 demo.py` arranca el sandbox del reto, aegix y la consola juntos para el botón
+«Ejecutar dos transacciones de prueba». Necesita el `mock_api.py` del reto: `YUMA_SANDBOX_PY=ruta/04_Sandbox_API/mock_api.py`.

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Alerta, Indicadores } from './components/Etapa5Monitor';
+import type { Alerta, Indicadores } from './tipos';
 import { Cola, Latencia, Mezcla, Pulso, Revision, Senales, type Metricas } from './components/Consola';
 import { PruebaTransacciones } from './components/PruebaTransacciones';
 

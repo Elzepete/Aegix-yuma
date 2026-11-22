@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: aegix (Go)
+        run: go vet ./... && go test -race ./...
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: panel-etapa5/package-lock.json
+      - name: Billetera
+        working-directory: yuma-billetera
+        run: node --test
+      - name: Consola
+        working-directory: panel-etapa5
+        run: npm ci && npm run lint && npm run build && npm test
+      - name: Herramientas
+        run: python3 herramientas/etiquetas_analista.py && bash -n herramientas/iniciar.sh
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Levantar todo
+        run: docker compose up -d --build --wait
+      - name: Prueba de humo
+        run: |
+          for i in $(seq 30); do curl -fs http://127.0.0.1:4173/salud && curl -fs http://127.0.0.1:3000/ >/dev/null && break; sleep 1; done
+          curl -fsS http://127.0.0.1:4173/salud
+          curl -fsS http://127.0.0.1:4173/ | grep -q 'id="root"'
+          curl -fsS http://127.0.0.1:4173/api/metricas | grep -q total_evaluadas
+          curl -fsS http://127.0.0.1:3000/api/autorizar | grep -q en_linea
+      - name: Registros si algo falla
+        if: failure()
+        run: docker compose logs

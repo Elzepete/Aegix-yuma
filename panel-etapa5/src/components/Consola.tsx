@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Alerta, Indicadores } from './Etapa5Monitor';
+import type { Alerta, Indicadores } from '../tipos';
 
 export interface Metricas {
   estado: 'OPTIMO' | 'DEGRADADO' | 'CRITICO';

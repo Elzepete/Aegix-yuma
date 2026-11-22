@@ -211,7 +211,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const clave = process.env.YUMA_PANEL_CLAVE;
   if (!clave) console.warn('Panel sin contraseña: define YUMA_PANEL_CLAVE antes de exponerlo con un túnel.');
   const server = createServer(createPanelHandler({ engine, sandbox, token: process.env.YUMA_PANEL_TOKEN, clave }));
-  server.listen(port, '127.0.0.1', () => {
+  // En Docker escucha en 0.0.0.0 dentro de la red privada del compose; en local, solo 127.0.0.1.
+  server.listen(port, process.env.YUMA_PANEL_HOST ?? '127.0.0.1', () => {
     console.log(`Panel Etapa 5 en http://127.0.0.1:${server.address().port}`);
   });
 }

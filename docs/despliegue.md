@@ -73,6 +73,7 @@ contraseña `YUMA_PANEL_CLAVE`): la operación aparece en menos de 2 s en «Toda
 Todo funciona en local, sin Vercel ni túnel:
 
 ```bash
+docker compose up --build                                   # todo con Docker, o bien:
 herramientas/iniciar.sh                                      # aegix :8081 y consola :4173
 AEGIX_URL=http://127.0.0.1:8081 node yuma-billetera/dev.mjs  # billetera :3000
 ```

@@ -31,4 +31,4 @@ createServer(async (req, res) => {
     return res.writeHead(404).end('no encontrado');
   }
   res.writeHead(200, { 'content-type': tipos[extname(ruta)] || 'application/octet-stream' }).end(contenido);
-}).listen(puerto, '127.0.0.1', () => console.log(`Billetera Yuma en http://localhost:${puerto}  (aegix: ${process.env.AEGIX_URL || 'sin configurar'})`));
+}).listen(puerto, process.env.HOST || '127.0.0.1', () => console.log(`Billetera Yuma en http://localhost:${puerto}  (aegix: ${process.env.AEGIX_URL || 'sin configurar'})`));

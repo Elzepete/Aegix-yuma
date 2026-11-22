@@ -1,5 +1,7 @@
 # Escudo Yuma · aegix
 
+[![CI](https://github.com/Elzepete/Aegix-yuma/actions/workflows/ci.yml/badge.svg)](https://github.com/Elzepete/Aegix-yuma/actions/workflows/ci.yml)
+
 Intermediario antifraude en Go para Yuma Pay (organización ficticia de la hackatón). Decide antes de autorizar
 cada operación: aprobar, pedir un código, retener para un analista o rechazar, con sus razones.
 
@@ -22,9 +24,18 @@ cada operación: aprobar, pedir un código, retener para un analista o rechazar,
 | `yuma-billetera/` | billetera de demostración para Vercel |
 | `panel-etapa5/` | consola del operador (React) y su servidor `proxy.mjs` |
 | `herramientas/` | `iniciar.sh`, calibración y etiquetas del analista |
-| `panel-etapa5-billetera/` | prototipo anterior del panel; no lee datos reales |
+| `Dockerfile`, `docker-compose.yml` | aegix, consola y billetera con un comando |
+| `.github/workflows/ci.yml` | pruebas de Go, Node y TypeScript, y arranque con Docker en cada push |
 
 ## Arrancar
+
+Con Docker (no hace falta instalar Go ni Node):
+
+```bash
+docker compose up --build     # consola http://127.0.0.1:4173 · billetera http://127.0.0.1:3000
+```
+
+Sin Docker (Go 1.22+ y Node 20+):
 
 ```bash
 herramientas/iniciar.sh                  # aegix :8081 y consola http://127.0.0.1:4173

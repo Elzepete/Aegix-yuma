@@ -1,0 +1,48 @@
+# Todo Escudo Yuma con un comando:  docker compose up --build
+#   consola  http://127.0.0.1:4173
+#   billetera http://127.0.0.1:3000
+# Los tres servicios comparten la red de «aegix»: se hablan por 127.0.0.1 y aegix (:8081) no se publica.
+# Variables opcionales: YUMA_PANEL_TOKEN, YUMA_PANEL_CLAVE, YUMA_AUDIT_KEY (ver docs/despliegue.md).
+
+services:
+  aegix:
+    build: { context: ., target: aegix }
+    environment:
+      YUMA_PANEL_TOKEN: ${YUMA_PANEL_TOKEN:-}
+      YUMA_AUDIT_KEY: ${YUMA_AUDIT_KEY:-}
+    volumes:
+      - datos:/app/datos            # auditoría y clave HMAC: sobreviven a docker compose down
+    ports:
+      - "127.0.0.1:4173:4173"       # consola
+      - "127.0.0.1:3000:3000"       # billetera
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8081/salud"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+
+  consola:
+    build: { context: ., target: consola }
+    network_mode: service:aegix
+    environment:
+      YUMA_PANEL_TOKEN: ${YUMA_PANEL_TOKEN:-}
+      YUMA_PANEL_CLAVE: ${YUMA_PANEL_CLAVE:-}
+    depends_on:
+      aegix: { condition: service_healthy }
+
+  billetera:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./yuma-billetera:/app:ro
+    command: ["node", "dev.mjs"]
+    environment:
+      AEGIX_URL: http://127.0.0.1:8081
+      AEGIX_TOKEN: ${YUMA_PANEL_TOKEN:-}
+      HOST: 0.0.0.0
+    network_mode: service:aegix
+    depends_on:
+      aegix: { condition: service_healthy }
+
+volumes:
+  datos:
