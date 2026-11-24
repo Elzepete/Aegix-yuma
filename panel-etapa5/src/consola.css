@@ -2,7 +2,7 @@
 :root {
   --fondo: #0B0B0C; --superficie: #121215; --superficie-2: #18181C; --hover: #1C1C21;
   --linea: rgba(255, 255, 255, .06); --linea-fuerte: rgba(255, 255, 255, .10);
-  --texto: #EDEDEF; --suave: #8B8B93; --tenue: #5F5F69;
+  --texto: #EDEDEF; --suave: #8B8B93; --tenue: #84848D;
   --ok: #3FB97A; --alerta: #E0A23A; --retener: #F0603F; --rechazo: #E5487A; --yuma: #6FCBA0;
   --sans: 'Geist', system-ui, -apple-system, sans-serif;
   --mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -12,8 +12,8 @@
   :root {
     --fondo: #FAFAFA; --superficie: #FFFFFF; --superficie-2: #F4F4F5; --hover: #F0F0F2;
     --linea: rgba(0, 0, 0, .07); --linea-fuerte: rgba(0, 0, 0, .12);
-    --texto: #18181B; --suave: #63636B; --tenue: #9A9AA3;
-    --ok: #15803D; --alerta: #A16207; --retener: #C2410C; --rechazo: #BE185D; --yuma: #0F6B4C;
+    --texto: #18181B; --suave: #63636B; --tenue: #6B6B73;
+    --ok: #15803D; --alerta: #975A06; --retener: #C2410C; --rechazo: #BE185D; --yuma: #0F6B4C;
     color-scheme: light;
   }
 }
@@ -161,3 +161,7 @@ h3 { font-size: 13px; font-weight: 600; margin: 0; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .actualizado { font-size: 12.5px; color: var(--tenue); font-family: var(--mono); }
 .actualizado.atrasado { color: var(--retener); }
+
+/* Preferencias de contacto del cliente (accesibilidad) */
+.contacto-accesible { display: inline-flex; margin-left: 8px; font-size: 12px; font-weight: 500; color: var(--yuma); }
+.preferencia-contacto { margin: 0 0 12px; padding: 10px 12px; border-radius: 6px; border: 1px solid var(--yuma); color: var(--texto); }

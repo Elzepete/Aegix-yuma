@@ -12,7 +12,8 @@ cada operación: aprobar, pedir un código, retener para un analista o rechazar,
 | --- | --- |
 | [docs/arquitectura.html](docs/arquitectura.html) | diagramas: despliegue, etapas del motor, secuencia de una retención, puntaje, ciclo del analista |
 | [docs/reporte-indicadores.md](docs/reporte-indicadores.md) | cifras medidas, validación temporal, escenarios de ataque |
-| [docs/explicabilidad.md](docs/explicabilidad.md) | cómo decide aegix, cada señal y su peso, límites |
+| [docs/explicabilidad.md](docs/explicabilidad.md) | cómo decide aegix, cada señal y su peso, accesibilidad y no discriminación, límites |
+| [docs/presentacion.html](docs/presentacion.html) · [docs/flujo.md](docs/flujo.md) | diagramas de flujo, cómo ejecutarlo el día de la presentación, lista de verificación y fallas comunes |
 | [docs/guion-demo.md](docs/guion-demo.md) | demo de 5 minutos con tiempos, preguntas probables y plan B |
 | [docs/despliegue.md](docs/despliegue.md) | publicar gratis: Vercel + túnel con dirección fija |
 

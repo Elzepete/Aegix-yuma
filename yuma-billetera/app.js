@@ -1,4 +1,4 @@
-import { CONVENIOS, OPERACIONES, construirSolicitud, estadoPorDecision, limpiarDestino } from './nucleo.js';
+import { CONTACTOS, CONVENIOS, OPERACIONES, construirSolicitud, estadoPorDecision, limpiarDestino, razonFacil } from './nucleo.js';
 
 // Clientes ficticios de la demostración. Sus datos viven solo en este navegador.
 const CLIENTES = [
@@ -52,6 +52,8 @@ const ICONOS = {
   candado: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/>',
   casa: '<path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/>',
   atras: '<path d="M15 6l-6 6 6 6"/>',
+  persona: '<circle cx="12" cy="4.5" r="2"/><path d="M5 8.5l7 1.5 7-1.5M12 10v4.5m0 0L9 21m3-6.5l3 6.5"/>',
+  altavoz: '<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 010 7M19 6a8.5 8.5 0 010 12"/>',
 };
 const icono = (n, extra = '') =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${ICONOS[n]}</svg>`;
@@ -79,18 +81,23 @@ const CLAVE = 'yuma.billetera.v2';
 function inicial() {
   return {
     version: 2,
-    usuarios: Object.fromEntries(CLIENTES.map((c) => [c.celular, { ...structuredClone(c), movimientos: [], senales: {} }])),
+    usuarios: Object.fromEntries(CLIENTES.map((c) => [c.celular, { ...structuredClone(c), movimientos: [], senales: {}, preferencias: { contacto: '', apoyo: false } }])),
     dispositivo: `D${azar(4)}`,
     sesion: null,
     ocultarSaldo: false,
+    accesibilidad: { ...SIN_AJUSTES },
   };
 }
+// Ajustes de este dispositivo; las preferencias de contacto son de cada cliente (usuario.preferencias).
+const SIN_AJUSTES = { texto: false, contraste: false, facil: false, voz: false };
 function cargar() {
   try {
     const e = JSON.parse(localStorage.getItem(CLAVE));
     if (e?.version === 2) {
       // Un desafío sin resolver al recargar la página se da por cancelado.
       Object.values(e.usuarios).forEach((u) => u.movimientos.forEach((m) => { if (m.estado === 'desafio') m.estado = 'cancelada'; }));
+      e.accesibilidad = { ...SIN_AJUSTES, ...e.accesibilidad };
+      Object.values(e.usuarios).forEach((u) => { u.preferencias ??= { contacto: '', apoyo: false }; });
       return e;
     }
   } catch { /* almacenamiento bloqueado o dañado: se empieza de cero */ }
@@ -106,11 +113,34 @@ let saludAegix = 'cargando';
 const app = document.getElementById('app');
 const usuario = () => estado.usuarios[estado.sesion];
 
+// Al cambiar de pantalla el foco va al título, para que el lector de pantalla la anuncie; si hay un error, al campo.
 function ir(nombre, datos = {}) {
+  const misma = vista.nombre === nombre;
   vista = { nombre, ...datos };
   pintar();
+  if (vista.error) return app.querySelector('[aria-invalid="true"]')?.focus();
+  if (misma) return;
   window.scrollTo(0, 0);
+  const titulo = app.querySelector('h1, h2');
+  titulo?.setAttribute('tabindex', '-1');
+  titulo?.focus({ preventScroll: true });
 }
+
+const ajustes = () => estado.accesibilidad;
+const facil = (normal, sencillo) => (ajustes().facil ? sencillo : normal);
+// El atributo que une un campo con el mensaje de error, y lo marca inválido cuando el error es suyo.
+const invalido = (campo) => `aria-describedby="error"${vista.error && vista.campo === campo ? ' aria-invalid="true"' : ''}`;
+const mensajeError = () => `<p class="error" id="error" ${vista.error ? 'role="alert"' : ''}>${esc(vista.error ?? '')}</p>`;
+
+function hablar(texto) {
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const voz = new SpeechSynthesisUtterance(texto);
+  voz.lang = 'es-CO';
+  voz.rate = 0.9;
+  speechSynthesis.speak(voz);
+}
+const digitos = (codigo) => codigo.split('').join(', ');
 
 function consultarSalud() {
   fetch('/api/autorizar')
@@ -127,7 +157,7 @@ function vIngreso() {
   const elegido = vista.celular ?? '';
   return `
     <section class="ingreso-hero">
-      ${marca}
+      <div class="ingreso-arriba">${marca}<button class="enlace" data-accion="ir" data-vista="accesibilidad">${icono('persona', 'width="18" height="18"')}Accesibilidad</button></div>
       <h1>Tu plata, <em>protegida</em> antes de salir.</h1>
       <p class="suave">Cada operación pasa por aegix, que decide en milisegundos si es segura.</p>
     </section>
@@ -143,13 +173,13 @@ function vIngreso() {
     <form data-form="ingreso" novalidate>
       <div class="campo">
         <label for="celular">Celular</label>
-        <input class="entrada" id="celular" name="celular" inputmode="numeric" autocomplete="off" value="${elegido ? telefono(elegido) : ''}" placeholder="300 000 0001">
+        <input class="entrada" id="celular" name="celular" inputmode="numeric" autocomplete="off" ${invalido('celular')} value="${elegido ? telefono(elegido) : ''}" placeholder="300 000 0001">
       </div>
       <div class="campo">
         <label for="clave">Clave de 4 dígitos</label>
-        <input class="entrada" id="clave" name="clave" type="password" inputmode="numeric" maxlength="4" autocomplete="off">
+        <input class="entrada" id="clave" name="clave" type="password" inputmode="numeric" maxlength="4" autocomplete="off" ${invalido('clave')}>
       </div>
-      <p class="error" id="error">${esc(vista.error ?? '')}</p>
+      ${mensajeError()}
       <button class="boton" type="submit">Ingresar</button>
     </form>`;
 }
@@ -164,7 +194,7 @@ function vMovimiento(m) {
     <li><button class="mov" data-accion="detalle" data-id="${esc(m.id)}">
       <span class="mov-icono">${icono(ICONO_OP[m.clave])}</span>
       <span class="mov-datos"><b>${esc(m.nombre || m.destino)}</b><span class="suave pequeno">${OPERACIONES[m.clave].titulo}, ${new Date(m.fecha).toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' })}</span></span>
-      <span class="mov-monto"><span class="${salida ? '' : 'tachado'}">−${cop.format(m.monto)}</span><small class="estado-${m.estado}">${ETIQUETA[m.estado]}</small></span>
+      <span class="mov-monto"><span class="${salida ? '' : 'tachado'}">−${cop.format(m.monto)}${salida ? '' : '<span class="sr-only"> (no salió)</span>'}</span><small class="estado-${m.estado}">${ETIQUETA[m.estado]}</small></span>
     </button></li>`;
 }
 
@@ -195,7 +225,7 @@ function vInicio() {
       <span class="suave pequeno">Saldo disponible</span>
       <div class="saldo-cifra">${estado.ocultarSaldo ? '$ •••••' : cop.format(u.saldo)}</div>
       <span class="suave pequeno">Cuenta ${telefono(u.celular)}</span>
-      <button class="ojo" data-accion="ocultar">${estado.ocultarSaldo ? 'Mostrar' : 'Ocultar'}</button>
+      <button class="ojo" data-accion="ocultar" aria-label="${estado.ocultarSaldo ? 'Mostrar' : 'Ocultar'} saldo">${estado.ocultarSaldo ? 'Mostrar' : 'Ocultar'}</button>
     </section>
     <nav class="acciones" aria-label="Operaciones">
       <button class="accion" data-accion="operar" data-op="enviar_yuma">${icono('enviar')}Enviar</button>
@@ -226,17 +256,17 @@ function vOperacion() {
     <form data-form="operacion" novalidate>
       <div class="campo">
         <label for="destino">${etiquetaDestino}</label>
-        <input class="entrada" id="destino" name="destino" autocomplete="off" ${['pagar_qr', 'servicios'].includes(op) ? '' : 'inputmode="numeric"'} value="${esc(vista.destino ?? '')}" placeholder="${{ pagar_qr: 'COM0380', servicios: 'Elige un convenio', enviar_banco: '0012345678' }[op] ?? '300 123 4567'}">
+        <input class="entrada" id="destino" name="destino" autocomplete="off" ${invalido('destino')} ${['pagar_qr', 'servicios'].includes(op) ? '' : 'inputmode="numeric"'} value="${esc(vista.destino ?? '')}" placeholder="${{ pagar_qr: 'COM0380', servicios: 'Elige un convenio', enviar_banco: '0012345678' }[op] ?? '300 123 4567'}">
         ${contactos.length ? `<div class="fichas">${contactos.map((c) => `<button type="button" class="ficha" data-accion="destino" data-id="${esc(c.id)}">${esc(c.nombre)}</button>`).join('')}</div>` : ''}
       </div>
       <div class="campo">
         <label for="monto">Monto</label>
-        <input class="entrada entrada-monto" id="monto" name="monto" inputmode="numeric" autocomplete="off" value="${vista.monto ? cop.format(vista.monto) : ''}" placeholder="$ 0">
+        <input class="entrada entrada-monto" id="monto" name="monto" inputmode="numeric" autocomplete="off" ${invalido('monto')} value="${vista.monto ? cop.format(vista.monto) : ''}" placeholder="$ 0">
         <div class="fichas">${[20000, 50000, 200000, 1000000].map((v) => `<button type="button" class="ficha" data-accion="monto" data-valor="${v}">${cop.format(v)}</button>`).join('')}
           <button type="button" class="ficha" data-accion="monto" data-valor="${u.saldo}">Todo</button></div>
         <span class="suave pequeno">Disponible: ${cop.format(u.saldo)}</span>
       </div>
-      <p class="error" id="error">${esc(vista.error ?? '')}</p>
+      ${mensajeError()}
       <button class="boton" type="submit">${icono('escudo', 'width="18" height="18"')}Continuar</button>
     </form>`;
 }
@@ -258,8 +288,8 @@ function vDecision(m) {
         ${dial(d.puntaje, color)}
         <div><span class="aegix-marca">${MARCA_AEGIX}Verificado por aegix</span><b style="color:${color}">${{ aprobar: 'Aprobada', desafiar: 'Pide verificación', retener: 'Retenida para revisión', rechazar: 'Rechazada' }[d.decision]}</b></div>
       </div>
-      <ul class="razones">${(d.razones || []).map((r) => `<li>${esc(r)}</li>`).join('')}</ul>
-      <div class="datos-tecnicos">
+      <ul class="razones">${(d.razones || []).map((r) => `<li>${esc(facil(r, razonFacil(r)))}</li>`).join('')}</ul>
+      <div class="datos-tecnicos" ${ajustes().facil ? 'hidden' : ''}>
         <span>aegix ${Number(d.latencia_ms).toFixed(1)} ms</span>
         <span>ida y vuelta ${m.idaVueltaMs} ms</span>
         ${d.version_reglas ? `<span>reglas ${esc(d.version_reglas)}</span>` : ''}
@@ -279,10 +309,28 @@ const TEXTO_RESULTADO = {
   cancelada: ['x', 'Operación cancelada', 'No se movió dinero.'],
   error: ['x', 'No pudimos verificarla', 'Por seguridad no se movió dinero. Intenta de nuevo.'],
 };
+// Lectura fácil: una idea por frase, palabras de uso diario.
+const TEXTO_FACIL = {
+  completada: 'Tu plata ya salió.',
+  verificada: 'Escribiste bien el código. Tu plata ya salió.',
+  desafio: 'Antes de enviar, escribe el código que te mandamos.',
+  retenida: 'Tu plata no salió todavía. Una persona de Yuma va a revisar el envío. Te avisamos aquí.',
+  liberada: 'Una persona revisó tu envío. Tu plata ya salió.',
+  bloqueada: 'Una persona revisó tu envío y lo frenó para protegerte. Tu plata sigue en tu cuenta. Si no fuiste tú, cambia tu clave.',
+  rechazada: 'No se movió plata.',
+  cancelada: 'No se movió plata.',
+  error: 'No pudimos revisar el envío. Tu plata sigue en tu cuenta. Intenta otra vez.',
+};
+function textoResultado(m) {
+  const [ic, titulo, normal] = TEXTO_RESULTADO[m.estado];
+  const contacto = CONTACTOS[usuario().preferencias.contacto];
+  const aviso = m.estado === 'retenida' && contacto ? ` Si hace falta, te contactaremos por ${contacto.toLowerCase()}.` : '';
+  return [ic, titulo, facil(normal, TEXTO_FACIL[m.estado]) + aviso];
+}
 
 function vResultado() {
   const m = usuario().movimientos.find((x) => x.id === vista.id);
-  const [ic, titulo, texto] = TEXTO_RESULTADO[m.estado];
+  const [ic, titulo, texto] = textoResultado(m);
   return `
     <section class="resultado">
       <div class="sello ${m.estado}">${icono(ic)}</div>
@@ -290,13 +338,15 @@ function vResultado() {
       <div class="resultado-monto">${cop.format(m.monto)}</div>
       <p class="suave">${esc(m.nombre || m.destino)} · ${OPERACIONES[m.clave].titulo}</p>
       <p>${texto}</p>
+      <button class="enlace" data-accion="escuchar">${icono('altavoz', 'width="18" height="18"')}Escuchar</button>
     </section>
     ${m.estado === 'desafio' ? `
       <form class="tarjeta" data-form="codigo" novalidate>
         <label for="codigo"><b>Código de 6 dígitos</b></label>
-        <p class="suave pequeno">Te lo enviamos por SMS (simulado, arriba de la pantalla).</p>
-        <div class="codigo"><input class="entrada" id="codigo" name="codigo" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></div>
-        <p class="error" id="error">${esc(vista.error ?? '')}</p>
+        <p class="suave pequeno" id="codigo-ayuda">Te lo enviamos por SMS (simulado, arriba de la pantalla). No vence: tómate tu tiempo.</p>
+        <div class="codigo"><input class="entrada" id="codigo" name="codigo" inputmode="numeric" maxlength="6" autocomplete="one-time-code" ${invalido('codigo').replace('aria-describedby="error"', 'aria-describedby="codigo-ayuda error"')}></div>
+        ${mensajeError()}
+        <button class="enlace" type="button" data-accion="ver-codigo">Ver o escuchar el código otra vez</button>
         <div class="pila"><button class="boton" type="submit">Confirmar</button>
         <button class="boton boton-sec" type="button" data-accion="cancelar-desafio">Cancelar operación</button></div>
       </form>` : ''}
@@ -331,18 +381,68 @@ function vSeguridad() {
     </div>`;
 }
 
+const interruptor = (dato, clave, titulo, texto, activo) => `
+  <label class="interruptor">
+    <span class="interruptor-texto"><b>${titulo}</b><span class="suave pequeno">${texto}</span></span>
+    <input type="checkbox" role="switch" ${dato}="${clave}" ${activo ? 'checked' : ''}>
+  </label>`;
+
+function vAccesibilidad() {
+  const a = ajustes();
+  const u = estado.sesion && usuario();
+  return `
+    ${u ? '' : `<button class="volver" data-accion="ir" data-vista="ingreso">${icono('atras', 'width="18" height="18"')}Ingreso</button>`}
+    <h1>Accesibilidad</h1>
+    <p class="suave">Ajusta Yuma a tu manera. Estos ajustes se guardan en este dispositivo.</p>
+    <div class="tarjeta">
+      <h2>Ver y leer</h2>
+      ${interruptor('data-ajuste', 'texto', 'Texto más grande', 'Agranda letras y botones en toda la billetera.', a.texto)}
+      ${interruptor('data-ajuste', 'contraste', 'Alto contraste', 'Colores más oscuros y bordes más marcados.', a.contraste)}
+      ${interruptor('data-ajuste', 'facil', 'Lectura fácil', 'Frases cortas y sin palabras técnicas para explicar cada decisión.', a.facil)}
+      ${interruptor('data-ajuste', 'voz', 'Leer en voz alta', 'Lee el resultado de cada operación y el código de verificación.', a.voz)}
+    </div>
+    ${u ? `<div class="tarjeta">
+      <h2>Si una persona revisa tu operación</h2>
+      <fieldset class="opciones">
+        <legend>¿Cómo prefieres que te contactemos?</legend>
+        ${[['', 'Sin preferencia'], ...Object.entries(CONTACTOS)].map(([v, t]) => `
+          <label class="opcion"><input type="radio" name="contacto" value="${v}" data-preferencia="contacto" ${u.preferencias.contacto === v ? 'checked' : ''}>${t}</label>`).join('')}
+      </fieldset>
+      ${interruptor('data-preferencia', 'apoyo', 'Me acompaña una persona de apoyo', 'Alguien de tu confianza puede estar contigo cuando te contactemos.', u.preferencias.apoyo)}
+      <p class="suave pequeno">Esto no cambia cómo aegix evalúa tus operaciones: solo le dice al analista cómo comunicarse contigo. No te preguntamos por diagnósticos ni datos de salud.</p>
+    </div>` : ''}`;
+}
+
 function vBarra() {
-  const actual = vista.nombre === 'seguridad' ? 'seguridad' : 'inicio';
+  const actual = ['seguridad', 'accesibilidad'].includes(vista.nombre) ? vista.nombre : 'inicio';
   return `<nav class="barra" aria-label="Principal">
     <button data-accion="ir" data-vista="inicio" ${actual === 'inicio' ? 'aria-current="page"' : ''}>${icono('casa')}Inicio</button>
     <button data-accion="ir" data-vista="seguridad" ${actual === 'seguridad' ? 'aria-current="page"' : ''}>${icono('escudo')}Seguridad</button>
+    <button data-accion="ir" data-vista="accesibilidad" ${actual === 'accesibilidad' ? 'aria-current="page"' : ''}>${icono('persona')}Accesibilidad</button>
   </nav>`;
 }
 
+// Selector que vuelve a encontrar el control enfocado después de redibujar la pantalla.
+function selectorDe(el) {
+  if (!el || el === document.body || !app.contains(el)) return '';
+  if (el.matches('h1, h2')) return 'h1, h2'; // el título que ir() enfocó
+  if (el.id) return `#${CSS.escape(el.id)}`;
+  const datos = Object.entries(el.dataset).map(([k, v]) => `[data-${k}="${CSS.escape(v)}"]`).join('');
+  return datos ? `${el.tagName}${datos}${el.value && el.type === 'radio' ? `[value="${CSS.escape(el.value)}"]` : ''}` : '';
+}
+
 function pintar() {
-  const vistas = { ingreso: vIngreso, inicio: vInicio, operacion: vOperacion, autorizando: vAutorizando, resultado: vResultado, seguridad: vSeguridad };
-  const conBarra = ['inicio', 'seguridad'].includes(vista.nombre);
+  const vistas = { ingreso: vIngreso, inicio: vInicio, operacion: vOperacion, autorizando: vAutorizando, resultado: vResultado, seguridad: vSeguridad, accesibilidad: vAccesibilidad };
+  const conBarra = estado.sesion && ['inicio', 'seguridad', 'accesibilidad'].includes(vista.nombre);
+  const foco = selectorDe(document.activeElement);
   app.innerHTML = vistas[vista.nombre]() + (conBarra ? vBarra() : '');
+  const raiz = document.documentElement;
+  raiz.toggleAttribute('data-texto-grande', ajustes().texto);
+  raiz.toggleAttribute('data-contraste', ajustes().contraste);
+  const destino = foco && app.querySelector(foco);
+  if (!destino) return;
+  if (destino.matches('h1, h2')) destino.setAttribute('tabindex', '-1');
+  destino.focus({ preventScroll: true });
 }
 
 // ---------- Acciones ----------
@@ -353,9 +453,12 @@ async function autorizar(op) {
   const id = `YW${Date.now().toString(36).toUpperCase()}${azar(2)}`;
   let solicitud;
   try {
-    solicitud = construirSolicitud(u, op, u.senales, { id, dispositivo: estado.dispositivo, agente: navigator.userAgent, ahora: new Date() });
+    solicitud = construirSolicitud(u, op, u.senales, {
+      id, dispositivo: estado.dispositivo, agente: navigator.userAgent, ahora: new Date(),
+      accesibilidad: { contacto: u.preferencias.contacto, lectura_facil: ajustes().facil, apoyo_de_confianza: u.preferencias.apoyo },
+    });
   } catch (e) {
-    return ir('operacion', { ...op, op: op.clave, error: e.message });
+    return ir('operacion', { ...op, op: op.clave, error: e.message, campo: /monto|saldo/i.test(e.message) ? 'monto' : 'destino' });
   }
   ir('autorizando');
   const inicio = performance.now();
@@ -380,16 +483,28 @@ async function autorizar(op) {
   u.movimientos.unshift(m);
   guardar();
   ir('resultado', { id });
+  if (ajustes().voz) leerResultado(m);
+}
+
+function leerResultado(m) {
+  const [, titulo, texto] = textoResultado(m);
+  hablar(`${titulo}. ${texto}${m.estado === 'desafio' ? ` Tu código es ${digitos(m.codigo)}.` : ''}`);
 }
 
 function enviarCodigo(m) {
   m.codigo = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1e6).padStart(6, '0');
   m.intentos = 0;
+  mostrarCodigo(m);
+}
+
+// El código no desaparece solo (WCAG 2.2.1): se cierra con el botón o al terminar la verificación.
+function mostrarCodigo(m) {
+  clearTimeout(avisar.t);
   const sms = document.getElementById('sms');
-  sms.innerHTML = `<b>Yuma</b> · Tu código para autorizar ${cop.format(m.monto)} es <b>${m.codigo}</b>. No lo compartas con nadie.`;
+  sms.innerHTML = `<p><b>Yuma</b> · Tu código para autorizar ${cop.format(m.monto)} es <b class="sms-codigo">${m.codigo}</b>. No lo compartas con nadie.</p>
+    <div class="sms-acciones"><button type="button" data-sms="escuchar">${icono('altavoz', 'width="16" height="16"')}Escuchar código</button><button type="button" data-sms="cerrar">Cerrar</button></div>`;
+  sms.dataset.codigo = m.codigo;
   sms.hidden = false;
-  clearTimeout(enviarCodigo.t);
-  enviarCodigo.t = setTimeout(() => { sms.hidden = true; }, 15000);
 }
 
 function cerrarDesafio(m, estadoFinal) {
@@ -419,7 +534,13 @@ app.addEventListener('click', (ev) => {
   const form = app.querySelector('form[data-form="operacion"]');
   const borrador = form ? { destino: form.destino.value, monto: Number(soloDigitos(form.monto.value)) || 0 } : {};
   switch (d.accion) {
-    case 'elegir': return ir('ingreso', { celular: d.celular });
+    case 'elegir': ir('ingreso', { celular: d.celular }); return app.querySelector('#clave')?.focus();
+    case 'escuchar': return leerResultado(usuario().movimientos.find((x) => x.id === vista.id));
+    case 'ver-codigo': {
+      const m = usuario().movimientos.find((x) => x.id === vista.id);
+      mostrarCodigo(m);
+      return hablar(`Tu código es ${digitos(m.codigo)}`);
+    }
     case 'ir': return ir(d.vista);
     case 'operar': return ir('operacion', { op: d.op, ...borrador });
     case 'destino': return ir('operacion', { ...vista, ...borrador, destino: d.id, error: '' });
@@ -432,15 +553,21 @@ app.addEventListener('click', (ev) => {
     case 'restablecer':
       if (confirm('¿Restablecer saldos, movimientos y señales de todos los clientes de prueba?')) {
         try { localStorage.removeItem(CLAVE); } catch { /* sin almacenamiento */ }
+        const conservar = estado.accesibilidad; // los ajustes de accesibilidad son de la persona, no de la demo
         estado = inicial();
+        estado.accesibilidad = conservar;
         ir('ingreso');
       }
   }
 });
 
 app.addEventListener('change', (ev) => {
-  const s = ev.target.dataset.senal;
-  if (s) { usuario().senales[s] = ev.target.checked; guardar(); }
+  const { senal, ajuste, preferencia } = ev.target.dataset;
+  if (senal) usuario().senales[senal] = ev.target.checked;
+  if (ajuste) estado.accesibilidad[ajuste] = ev.target.checked;
+  if (preferencia) usuario().preferencias[preferencia] = ev.target.type === 'radio' ? ev.target.value : ev.target.checked;
+  guardar();
+  if (ajuste) pintar();
 });
 
 app.addEventListener('input', (ev) => {
@@ -456,7 +583,7 @@ app.addEventListener('submit', (ev) => {
   if (f.dataset.form === 'ingreso') {
     const cel = soloDigitos(f.celular.value);
     const u = estado.usuarios[cel];
-    if (!u || u.clave !== f.clave.value) return ir('ingreso', { celular: cel, error: 'Celular o clave incorrectos.' });
+    if (!u || u.clave !== f.clave.value) return ir('ingreso', { celular: cel, error: 'Celular o clave incorrectos.', campo: 'clave' });
     estado.sesion = cel;
     guardar();
     consultarSalud();
@@ -470,7 +597,7 @@ app.addEventListener('submit', (ev) => {
     if (f.codigo.value.trim() === m.codigo) return cerrarDesafio(m, 'verificada');
     m.intentos += 1;
     if (m.intentos >= 3) return cerrarDesafio(m, 'cancelada');
-    return ir('resultado', { id: m.id, error: `Código incorrecto. Te quedan ${3 - m.intentos} intentos.` });
+    return ir('resultado', { id: m.id, error: `Código incorrecto. Te quedan ${3 - m.intentos} intentos.`, campo: 'codigo' });
   }
 });
 
@@ -518,11 +645,21 @@ async function revisarRetenidas() {
 
 function avisar(texto) {
   const sms = document.getElementById('sms');
-  sms.innerHTML = `<b>Yuma</b> · ${esc(texto)}`;
+  sms.innerHTML = `<p><b>Yuma</b> · ${esc(texto)}</p><div class="sms-acciones"><button type="button" data-sms="cerrar">Cerrar</button></div>`;
+  delete sms.dataset.codigo;
   sms.hidden = false;
-  clearTimeout(enviarCodigo.t);
-  enviarCodigo.t = setTimeout(() => { sms.hidden = true; }, 8000);
+  if (ajustes().voz) hablar(texto);
+  // El mismo aviso queda en el movimiento; este recuadro se cierra solo a los 20 s, salvo que tenga el foco.
+  clearTimeout(avisar.t);
+  avisar.t = setTimeout(() => { if (!sms.contains(document.activeElement)) sms.hidden = true; }, 20000);
 }
+
+document.getElementById('sms').addEventListener('click', (ev) => {
+  const accion = ev.target.closest('[data-sms]')?.dataset.sms;
+  const sms = ev.currentTarget;
+  if (accion === 'escuchar') hablar(`Tu código es ${digitos(sms.dataset.codigo)}`);
+  if (accion === 'cerrar') sms.hidden = true;
+});
 
 setInterval(revisarRetenidas, 4000);
 if (estado.sesion) consultarSalud();

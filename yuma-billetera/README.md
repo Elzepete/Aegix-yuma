@@ -15,6 +15,13 @@ Sin dependencias ni paso de compilación: HTML + CSS + JS y una función de Verc
 que guarda la URL y la clave de aegix fuera del navegador y añade la IP y el país reales de la conexión.
 Saldos y movimientos viven en el `localStorage` del navegador (es una demo).
 
+**Accesibilidad** (pestaña propia, también desde la pantalla de ingreso): texto más grande, alto contraste, lectura
+fácil de cada decisión, lectura en voz alta del resultado y del código, y cómo prefiere el cliente que lo contacten
+si un analista revisa su operación (incluida videollamada con intérprete de lengua de señas). El código de
+verificación no vence. Funciona con lector de pantalla y teclado: el foco sigue a cada pantalla y los errores se
+anuncian junto a su campo. Las preferencias de contacto viajan a aegix, que las muestra al analista y no las usa
+para decidir.
+
 Clientes de prueba: celulares 300 000 0001 a 300 000 0004, claves 1111 a 4444 (aparecen en pantalla).
 Cada uno tiene su perfil (Julián es una cuenta de 21 días) y sus propias señales de riesgo simuladas;
 aegix además arma un historial por cliente con cada operación.

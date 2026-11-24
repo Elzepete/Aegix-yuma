@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { construirSolicitud, fechaColombia, estadoPorDecision, validarDestino } from './nucleo.js';
+import { readFileSync } from 'node:fs';
+import { CONTACTOS, construirSolicitud, fechaColombia, estadoPorDecision, razonFacil, validarDestino } from './nucleo.js';
 
 const laura = {
   celular: '3000000001', departamento: 'Antioquia', antiguedad: 812, saldo: 1850000,
@@ -94,4 +95,23 @@ test('la función de Vercel reenvía a aegix con IP, país y clave', async (t) =
 
   process.env.AEGIX_URL = 'http://127.0.0.1:1';
   assert.equal((await POST(new Request('http://x', { method: 'POST', body: JSON.stringify(s) }))).status, 504);
+});
+
+test('accesibilidad: las preferencias viajan a aegix solo si el cliente las eligió', () => {
+  const op = { clave: 'enviar_yuma', destino: '3000000002', monto: 50000 };
+  assert.equal(construirSolicitud(laura, op, {}, entorno).contexto.accesibilidad, undefined);
+  const s = construirSolicitud(laura, op, {}, { ...entorno, accesibilidad: { contacto: 'llamada', lectura_facil: true, apoyo_de_confianza: false } });
+  assert.deepEqual(s.contexto.accesibilidad, { contacto: 'llamada', lectura_facil: true });
+  assert.equal(construirSolicitud(laura, op, {}, { ...entorno, accesibilidad: { contacto: '', lectura_facil: false, apoyo_de_confianza: false } }).contexto.accesibilidad, undefined);
+  assert.throws(() => construirSolicitud(laura, op, {}, { ...entorno, accesibilidad: { contacto: 'fax' } }), /contacto/);
+  assert.deepEqual(Object.keys(CONTACTOS), ['sms', 'llamada', 'videollamada_lsc', 'chat'], 'los mismos canales que valida aegix');
+});
+
+test('lectura fácil: cada razón de reglas.yaml tiene su versión sencilla', () => {
+  const razones = [...readFileSync(new URL('../config/reglas.yaml', import.meta.url), 'utf8').matchAll(/razon: "([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(razones.length >= 10);
+  for (const r of [...razones, 'ninguna regla de riesgo se activó', 'operación de bajo riesgo: se verifica la identidad en lugar de retener']) {
+    assert.notEqual(razonFacil(r), r, `falta la versión fácil de «${r}»`);
+  }
+  assert.equal(razonFacil('algo nuevo'), 'algo nuevo', 'una razón desconocida se muestra tal cual');
 });

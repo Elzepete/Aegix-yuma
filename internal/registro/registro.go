@@ -15,6 +15,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"escudo-yuma/internal/contexto"
 )
 
 type Entrada struct {
@@ -26,6 +28,8 @@ type Entrada struct {
 	Clave   bool   `json:"cambio_clave"`
 	Destino bool   `json:"destino_nuevo"`
 	Monto   int64  `json:"monto_cop"`
+	// Preferencias de contacto del cliente, para el analista. No influyen en la decisión.
+	Accesibilidad *contexto.Accesibilidad `json:"accesibilidad,omitempty"`
 }
 
 type Evento struct {

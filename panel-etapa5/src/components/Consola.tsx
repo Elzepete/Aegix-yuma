@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import type { Alerta, Indicadores } from '../tipos';
+import { useEffect, useRef, useState } from 'react';
+import { comoContactar, type Alerta, type Indicadores } from '../tipos';
 
 export interface Metricas {
   estado: 'OPTIMO' | 'DEGRADADO' | 'CRITICO';
@@ -116,6 +116,14 @@ export function Cola({ alertas, ahora, nuevas, alResolver }: { alertas: Alerta[]
   const [confirmando, setConfirmando] = useState<Accion | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [errorAccion, setErrorAccion] = useState('');
+  // El foco sigue a la acción: al pedir confirmación va a «Cancelar» (la opción segura) y al terminar vuelve a la fila.
+  const cancelar = useRef<HTMLButtonElement>(null);
+  const primera = useRef<HTMLButtonElement>(null);
+  const pidio = useRef(false);
+  useEffect(() => {
+    if (confirmando) { pidio.current = true; cancelar.current?.focus(); }
+    else if (pidio.current) { pidio.current = false; primera.current?.focus(); }
+  }, [confirmando]);
 
   async function resolver(ref: string, accion: Accion) {
     setEnviando(true);
@@ -126,8 +134,10 @@ export function Cola({ alertas, ahora, nuevas, alResolver }: { alertas: Alerta[]
       });
       const datos = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(datos.error ?? `aegix respondió HTTP ${res.status}`);
+      pidio.current = false;
       setConfirmando(null);
       alResolver();
+      document.getElementById(`fila-${ref}`)?.focus();
     } catch (causa) {
       setErrorAccion(causa instanceof Error ? causa.message : 'No se pudo registrar la resolución.');
     } finally {
@@ -149,7 +159,7 @@ export function Cola({ alertas, ahora, nuevas, alResolver }: { alertas: Alerta[]
         const resoluble = a.decision === 'retener' && !resuelta && !!a.referencia;
         return (
           <li key={clave} className={`caso${nuevas.has(clave) ? ' nuevo' : ''}`} style={{ ['--c' as string]: color }}>
-            <button type="button" className="fila" aria-expanded={expandido}
+            <button type="button" className="fila" aria-expanded={expandido} id={a.referencia ? `fila-${a.referencia}` : undefined}
                     onClick={() => { setAbierto(expandido ? null : clave); setConfirmando(null); setErrorAccion(''); }}>
               <Dial puntaje={a.puntaje} color={color} fuerte={fuerte} />
               <span className="col-estado">
@@ -158,6 +168,7 @@ export function Cola({ alertas, ahora, nuevas, alResolver }: { alertas: Alerta[]
                   {!!a.entrada?.monto_cop && <span className="monto mono">{pesos.format(a.entrada.monto_cop)}</span>}
                 </span>
                 <Origen origen={a.origen} />
+                {a.entrada?.accesibilidad && <span className="contacto-accesible">Contacto accesible</span>}
               </span>
               <span className="col-senales">
                 {razones.slice(0, 3).map((r, i) => <span key={i} className={`etiqueta${i === 0 && fuerte ? ' principal' : ''}`}>{r}</span>)}
@@ -170,6 +181,10 @@ export function Cola({ alertas, ahora, nuevas, alResolver }: { alertas: Alerta[]
             </button>
             {expandido && (
               <div className="detalle">
+                {a.entrada?.accesibilidad && (
+                  <p className="preferencia-contacto"><b>Antes de contactar al cliente:</b> {comoContactar(a.entrada.accesibilidad)}.
+                    No cambia la decisión de aegix.</p>
+                )}
                 <section>
                   <h3>Razones, de mayor a menor peso</h3>
                   <ol>{razones.map((r, i) => <li key={i}>{r}</li>)}</ol>
@@ -188,7 +203,7 @@ export function Cola({ alertas, ahora, nuevas, alResolver }: { alertas: Alerta[]
                   <div className="acciones-caso">
                     {!confirmando ? (
                       <>
-                        <button type="button" className="boton boton-liberar" onClick={() => setConfirmando('liberar')}>{ACCION.liberar[0]}</button>
+                        <button type="button" ref={primera} className="boton boton-liberar" onClick={() => setConfirmando('liberar')}>{ACCION.liberar[0]}</button>
                         <button type="button" className="boton boton-fraude" onClick={() => setConfirmando('confirmar_fraude')}>{ACCION.confirmar_fraude[0]}</button>
                         <span className="nota-accion">El cliente verá el resultado en su billetera en unos segundos.</span>
                       </>
@@ -199,7 +214,7 @@ export function Cola({ alertas, ahora, nuevas, alResolver }: { alertas: Alerta[]
                                 disabled={enviando} onClick={() => resolver(a.referencia!, confirmando)}>
                           {enviando ? 'Registrando…' : ACCION[confirmando][2]}
                         </button>
-                        <button type="button" className="boton" disabled={enviando} onClick={() => setConfirmando(null)}>Cancelar</button>
+                        <button type="button" ref={cancelar} className="boton" disabled={enviando} onClick={() => setConfirmando(null)}>Cancelar</button>
                       </>
                     )}
                     {errorAccion && <span className="error-accion" role="alert">{errorAccion}</span>}

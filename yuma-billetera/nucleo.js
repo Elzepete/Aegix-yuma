@@ -56,11 +56,39 @@ export function validarDestino(clave, destino, celularPropio) {
   return '';
 }
 
+// Canales con los que un analista puede contactar al cliente si revisa su operación (los mismos que acepta aegix).
+export const CONTACTOS = {
+  sms: 'Mensaje de texto',
+  llamada: 'Llamada de voz',
+  videollamada_lsc: 'Videollamada con intérprete de lengua de señas',
+  chat: 'Chat escrito',
+};
+
+// Razones de aegix (config/reglas.yaml) en lectura fácil: frases cortas, en segunda persona y sin tecnicismos.
+const RAZON_FACIL = {
+  'ninguna regla de riesgo se activó': 'Todo se ve normal.',
+  'dispositivo nuevo': 'Estás usando un celular que registraste hace poco.',
+  'conexión por un nodo de salida Tor': 'Tu conexión está escondida con la red Tor.',
+  'conexión desde un proxy o centro de datos': 'Tu conexión pasa por una VPN o un servidor.',
+  'hora atípica para este cliente': 'Es una hora en la que casi nunca usas Yuma.',
+  'país de conexión fuera del historial del cliente': 'Te conectas desde otro país.',
+  'conexión desde un departamento distinto al habitual': 'Te conectas desde otra región.',
+  'cambio reciente de SIM': 'Tu tarjeta SIM cambió hace poco.',
+  'cambio reciente de clave': 'Cambiaste tu clave hace poco.',
+  'destino nuevo': 'Nunca le habías enviado plata a este destino.',
+  'cuenta con menos de 30 días': 'Tu cuenta es muy nueva.',
+  'monto elevado frente al saldo disponible': 'Estás enviando casi toda tu plata.',
+  'varias operaciones del cliente en los últimos 10 minutos': 'Hiciste varias operaciones en pocos minutos.',
+  'operación de bajo riesgo: se verifica la identidad en lugar de retener': 'Por seguridad, solo te pedimos un código.',
+  'se requiere una señal adicional ajena al origen y al horario para retener': 'Por seguridad, te pedimos un código.',
+};
+export const razonFacil = (r) => RAZON_FACIL[r] ?? r;
+
 /**
  * @param usuario   perfil del cliente de demostración
  * @param op        { clave: keyof OPERACIONES, destino, monto }
  * @param senales   interruptores del simulador de riesgo
- * @param entorno   { id, dispositivo, agente, ahora }
+ * @param entorno   { id, dispositivo, agente, ahora, accesibilidad? }
  */
 export function construirSolicitud(usuario, op, senales, entorno) {
   const tipo = OPERACIONES[op.clave];
@@ -84,6 +112,14 @@ export function construirSolicitud(usuario, op, senales, entorno) {
   };
   // Sin simulación, la función del servidor completa IP y país reales de la conexión.
   if (senales.exterior) contexto.pais_ip = 'US';
+  // Solo se envía lo que el cliente eligió. aegix lo muestra al analista y no lo usa para decidir.
+  const { contacto = '', lectura_facil = false, apoyo_de_confianza = false } = entorno.accesibilidad ?? {};
+  if (contacto && !CONTACTOS[contacto]) throw new Error('Canal de contacto desconocido.');
+  if (contacto || lectura_facil || apoyo_de_confianza) {
+    contexto.accesibilidad = {
+      ...(contacto && { contacto }), ...(lectura_facil && { lectura_facil }), ...(apoyo_de_confianza && { apoyo_de_confianza }),
+    };
+  }
 
   return {
     transaccion: {

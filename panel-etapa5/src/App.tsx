@@ -90,6 +90,17 @@ export default function App() {
 
   const pendientes = (alertas ?? []).filter((a) => a.decision === 'retener' && !a.resolucion).length;
   const sinConexion = !!(error && errorMetricas);
+
+  // El lector de pantalla oye solo lo que importa: casos nuevos por resolver y la pérdida de conexión, no el reloj.
+  const [anuncio, setAnuncio] = useState('');
+  const previos = useRef<number | null>(null);
+  useEffect(() => {
+    if (!alertas) return;
+    const nuevos = previos.current === null ? 0 : pendientes - previos.current;
+    previos.current = pendientes;
+    if (nuevos > 0) setAnuncio(`${nuevos === 1 ? 'Un caso nuevo' : `${nuevos} casos nuevos`} por resolver. Total pendientes: ${pendientes}.`);
+  }, [alertas, pendientes]);
+  useEffect(() => { if (sinConexion) setAnuncio('Se perdió la conexión con aegix.'); }, [sinConexion]);
   const [estadoTexto, estadoColor] = sinConexion ? ['Sin conexión con aegix', 'var(--retener)'] : metricas ? ESTADO[metricas.estado] : ['Conectando', 'var(--suave)'];
 
   return (
@@ -105,7 +116,7 @@ export default function App() {
         <div className="cabecera-der">
           <span className="etiqueta estado-sistema" style={{ ['--c' as string]: estadoColor }}>{estadoTexto}</span>
           {alertas?.[0] && <span className="etiqueta mono">{alertas[0].version_reglas}</span>}
-          <span className={`actualizado${atrasado || errorMetricas ? ' atrasado' : ''}`} role="status">
+          <span className={`actualizado${atrasado || errorMetricas ? ' atrasado' : ''}`}>
             {errorMetricas && atrasado ? `Sin respuesta de aegix: ${errorMetricas}`
               : segundosDesde === null ? 'Conectando…'
               : segundosDesde < 3 ? 'Actualizado ahora' : `Actualizado hace ${segundosDesde} s`}
@@ -116,6 +127,7 @@ export default function App() {
         </div>
       </header>
 
+      <p className="sr-only" aria-live="polite">{anuncio}</p>
       <main className="contenido">
         <Pulso m={metricas} ind={indicadores} historial={historial} />
         {sinConexion && <p className="aviso" role="alert">No se pudo leer aegix ({error}). Revisa que el intermediario esté corriendo en 127.0.0.1:8081.</p>}

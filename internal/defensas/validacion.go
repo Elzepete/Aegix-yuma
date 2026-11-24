@@ -97,6 +97,9 @@ func Validar(s Solicitud, versiones map[string]bool) (netip.Addr, time.Time, err
 	if strings.TrimSpace(d.SistemaOperativo) == "" {
 		return netip.Addr{}, time.Time{}, fmt.Errorf("falta sistema_operativo")
 	}
+	if a := d.Accesibilidad; a != nil && !esUnoDe(a.Contacto, "", "sms", "llamada", "videollamada_lsc", "chat") {
+		return netip.Addr{}, time.Time{}, fmt.Errorf("canal de contacto de accesibilidad inválido")
+	}
 	if !versiones[d.VersionApp] {
 		return netip.Addr{}, time.Time{}, fmt.Errorf("versión de la aplicación no permitida")
 	}

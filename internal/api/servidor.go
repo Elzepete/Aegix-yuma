@@ -234,6 +234,7 @@ func Nuevo(cliente *sandbox.Cliente, cfg Config) http.Handler {
 				Tipo: t.TipoOperacion, Canal: t.Canal, Fecha: t.FechaHora,
 				Nuevo: t.DispositivoNuevo == 1, SIM: t.CambioSIM48h == 1,
 				Clave: t.CambioClave24h == 1, Destino: t.DestinoNuevo == 1, Monto: t.MontoCOP,
+				Accesibilidad: entrada.Contexto.Accesibilidad,
 			}, confirmada)
 			colector.RegistrarTransaccion(origen, decision.Accion, t.MontoCOP, salida.LatenciaMS, decision.Razones, confirmada)
 			if reportar && !confirmada {

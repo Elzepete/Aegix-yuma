@@ -86,7 +86,24 @@ Cada caso resuelto vale por 10 operaciones del histórico en el entrenamiento; l
 histórico intacto. Si los nuevos pesos mejoran, se copian a `config/reglas.yaml` y aegix los carga en caliente,
 sin reiniciar.
 
-## 6. Límites conocidos
+## 6. Accesibilidad y no discriminación
+
+aegix no castiga a quien usa la billetera de otra manera.
+
+- **Ninguna regla usa señales que se confundan con una discapacidad**: ni velocidad de escritura, ni tiempo en
+  pantalla, ni uso de lector de pantalla, control por voz o teclado. Tampoco edad, región ni ingresos.
+- **Preferencias de contacto, no diagnósticos.** En la billetera (Accesibilidad) el cliente puede elegir cómo quiere
+  que lo contacten si un analista revisa su operación: mensaje de texto, llamada de voz, videollamada con intérprete
+  de lengua de señas o chat, si prefiere lectura fácil y si lo acompaña una persona de apoyo (Ley 1996 de 2019).
+  Viajan en `contexto.accesibilidad`; aegix las guarda para el analista y **no las usa para decidir**. Lo comprueba
+  `TestAccesibilidadNoCambiaLaDecisionYLlegaAlAnalista`: mismas señales con y sin preferencias, mismo puntaje y
+  misma decisión en los tres niveles de riesgo.
+- **El analista las ve antes de actuar.** El caso muestra «Contacto accesible» y, en el detalle, cómo comunicarse.
+- **La verificación no excluye.** Un desafío pide un código que no vence, se puede escuchar en voz alta y volver a
+  ver; quien opera con el celular de su persona de apoyo recibe un código, no un bloqueo (dispositivo nuevo solo
+  no alcanza para retener).
+
+## 7. Límites conocidos
 
 - Los datos son sintéticos: los pesos responden a cómo se simuló el fraude del reto.
 - Tor, proxy y país nuevo no se pueden calibrar con estos datos; sus pesos son criterio experto.

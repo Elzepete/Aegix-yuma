@@ -303,3 +303,58 @@ func TestMetricasSobrevivenAlReinicio(t *testing.T) {
 		t.Fatal("la billetera debe seguir encontrando su retención tras el reinicio")
 	}
 }
+
+// Las preferencias de accesibilidad solo informan al analista cómo contactar al cliente:
+// nunca cambian el puntaje ni la decisión.
+func TestAccesibilidadNoCambiaLaDecisionYLlegaAlAnalista(t *testing.T) {
+	motor, err := reglas.Abrir(context.Background(), "../../config/reglas.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg, err := registro.Abrir(filepath.Join(t.TempDir(), "a.jsonl"), "k")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reg.Close()
+	h := Nuevo(sandbox.Nuevo("http://127.0.0.1:9"), Config{
+		Origen: contexto.Simulado{}, Motor: motor, Versiones: map[string]bool{"3.4.1": true},
+		Limites: defensas.Limites{Cliente: 10, IP: 10, Dispositivo: 10}, Registro: reg,
+	})
+	for _, senales := range [][2]int{{0, 0}, {1, 0}, {1, 1}} { // aprobar, desafiar, retener
+		sin, con := solicitudBase("YW-SIN"), solicitudBase("YW-CON")
+		for _, s := range []*defensas.Solicitud{&sin, &con} {
+			s.Transaccion.DispositivoNuevo, s.Transaccion.CambioSIM48h = senales[0], senales[1]
+			s.Contexto.EsTor = senales[1] == 1
+		}
+		con.Transaccion.Cliente = sin.Transaccion.Cliente + "-a"
+		con.Contexto.Accesibilidad = &contexto.Accesibilidad{Contacto: "videollamada_lsc", LecturaFacil: true, Apoyo: true}
+		_, a := enviar(t, h, "/v1/autorizar", sin)
+		_, b := enviar(t, h, "/v1/autorizar", con)
+		if a.Accion != b.Accion || a.Puntaje != b.Puntaje {
+			t.Fatalf("señales %v: sin preferencias %s %.2f, con preferencias %s %.2f", senales, a.Accion, a.Puntaje, b.Accion, b.Puntaje)
+		}
+	}
+	var alertas []registro.Evento
+	for fin := time.Now().Add(2 * time.Second); len(alertas) == 0; time.Sleep(5 * time.Millisecond) {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/alertas", nil))
+		var todas []registro.Evento
+		_ = json.Unmarshal(rec.Body.Bytes(), &todas)
+		for _, e := range todas {
+			if e.Entrada != nil && e.Entrada.Accesibilidad != nil {
+				alertas = append(alertas, e)
+			}
+		}
+		if time.Now().After(fin) {
+			t.Fatal("la retención con preferencias no llegó a /alertas")
+		}
+	}
+	if p := alertas[0].Entrada.Accesibilidad; p.Contacto != "videollamada_lsc" || !p.LecturaFacil || !p.Apoyo {
+		t.Fatalf("preferencias en la alerta: %+v", p)
+	}
+	mala := solicitudBase("YW-MALA")
+	mala.Contexto.Accesibilidad = &contexto.Accesibilidad{Contacto: "paloma_mensajera"}
+	if rec, _ := enviar(t, h, "/v1/autorizar", mala); rec.Code != http.StatusBadRequest {
+		t.Fatalf("un canal de contacto desconocido debe dar 400, dio %d", rec.Code)
+	}
+}

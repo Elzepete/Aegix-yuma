@@ -1,0 +1,303 @@
+<title>Presentar Escudo Yuma</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap">
+<style>
+/* Misma identidad que docs/arquitectura.html: una columna de lectura que se abre para los diagramas. */
+:root {
+  --papel: #F4F5FA; --hoja: #FFFFFF; --tinta: #1A1D38; --suave: #5D6283; --regla: #D8DBE8;
+  --aegix: #E7E8F6; --yuma-zona: #E2EEE8; --codigo: #ECEEF6;
+  --ok: #17704A; --alerta: #855700; --retener: #C2401F;
+  --display: 'Archivo', 'Arial Narrow', system-ui, sans-serif;
+  --texto: 'Archivo', system-ui, sans-serif;
+  --mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --papel: #11132A; --hoja: #191C36; --tinta: #E6E8F5; --suave: #A3A7C4; --regla: #2D3154;
+  --aegix: #1E2244; --yuma-zona: #15302A; --codigo: #22264A;
+  --ok: #4CC48F; --alerta: #E4AA3C; --retener: #F07150; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --papel: #11132A; --hoja: #191C36; --tinta: #E6E8F5; --suave: #A3A7C4; --regla: #2D3154;
+  --aegix: #1E2244; --yuma-zona: #15302A; --codigo: #22264A;
+  --ok: #4CC48F; --alerta: #E4AA3C; --retener: #F07150; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--papel); color: var(--tinta); font: 400 1rem/1.55 var(--texto); font-variant-numeric: tabular-nums; }
+.envoltura { max-width: 1100px; margin: 0 auto; padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.lectura { max-width: 72ch; }
+h1, h2, h3 { font-family: var(--display); font-stretch: 72%; font-weight: 760; letter-spacing: -.01em; line-height: 1.05; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.3rem, 6vw, 3.8rem); }
+h2 { font-size: clamp(1.5rem, 3.2vw, 2.1rem); margin-top: 56px; }
+h3 { font-size: 1.25rem; font-stretch: 85%; }
+p { margin: 12px 0 0; }
+.entrada { font-size: 1.12rem; color: var(--suave); }
+.marca { display: flex; align-items: center; gap: 10px; font-family: var(--display); font-stretch: 90%; font-weight: 700; margin-bottom: 24px; }
+.marca svg { width: 28px; height: 28px; }
+nav.indice { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 8px 18px; }
+a { color: var(--tinta); text-underline-offset: 3px; text-decoration-color: var(--suave); }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid var(--tinta); outline-offset: 2px; border-radius: 4px; }
+
+figure { margin: 22px 0 0; }
+.lienzo { overflow-x: auto; background: var(--hoja); border: 1px solid var(--regla); border-radius: 16px; padding: 16px; }
+.lienzo pre.mermaid { margin: 0; min-width: 640px; background: transparent; }
+figcaption { color: var(--suave); font-size: .95rem; margin-top: 10px; max-width: 80ch; }
+
+/* Rutas */
+.rutas { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 16px; margin-top: 22px; }
+.ruta { background: var(--hoja); border: 1px solid var(--regla); border-radius: 16px; padding: 18px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.ruta header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.letra { font-family: var(--display); font-stretch: 70%; font-weight: 800; font-size: 2rem; line-height: 1; }
+.cuando { color: var(--suave); font-size: .92rem; margin: 0; }
+.cmd { position: relative; background: var(--codigo); border-radius: 10px; padding: 12px 12px 12px 14px; font: 500 .86rem/1.5 var(--mono); overflow-x: auto; white-space: pre; margin: 0; }
+.cmd-caja { display: grid; gap: 6px; }
+.cmd-caja .titulo-cmd { font-size: .85rem; color: var(--suave); }
+.copiar { justify-self: start; border: 1px solid var(--regla); background: var(--hoja); color: var(--tinta); border-radius: 8px; padding: 6px 12px; font: 600 .85rem var(--texto); cursor: pointer; min-height: 36px; }
+.copiar:hover { border-color: var(--suave); }
+.abrir { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: .92rem; }
+.abrir code { font-family: var(--mono); font-size: .86rem; }
+
+/* Lista de verificación */
+.verificar { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 2px; max-width: 72ch; }
+.verificar label { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--regla); cursor: pointer; }
+.verificar input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--ok); flex: none; }
+.verificar input:checked + span { color: var(--suave); text-decoration: line-through; }
+.reiniciar { margin-top: 12px; }
+
+/* Tablas */
+.tabla { overflow-x: auto; margin-top: 18px; }
+table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: .95rem; }
+th { text-align: left; font-weight: 650; color: var(--suave); padding: 8px 14px 8px 0; border-bottom: 1px solid var(--regla); }
+td { padding: 11px 14px 11px 0; border-bottom: 1px solid var(--regla); vertical-align: top; }
+td:first-child { white-space: nowrap; font-family: var(--mono); font-size: .88rem; }
+code { font-family: var(--mono); font-size: .88em; background: var(--codigo); padding: 1px 5px; border-radius: 5px; }
+.nota { color: var(--suave); font-size: .9rem; }
+.nuevo { display: inline-block; font-size: .78rem; font-weight: 700; color: var(--ok); border: 1px solid var(--ok); border-radius: 99px; padding: 0 7px; margin-left: 6px; vertical-align: 2px; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="envoltura">
+  <div class="marca">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="57 82" transform="rotate(135 16 16)"/><circle cx="16" cy="16" r="4" fill="currentColor"/></svg>
+    aegix para Yuma Pay
+  </div>
+  <div class="lectura">
+    <h1>Presentar Escudo Yuma</h1>
+    <p class="entrada">Cómo funciona el proyecto de principio a fin, qué comando correr según dónde presentes, qué revisar antes de empezar y qué hacer si algo falla.</p>
+  </div>
+  <nav class="indice" aria-label="Contenido">
+    <a href="#funciona">Cómo funciona</a>
+    <a href="#ejecutar">Cómo ejecutarlo</a>
+    <a href="#comandos">Comandos</a>
+    <a href="#revisar">Antes de empezar</a>
+    <a href="#guion">Guion</a>
+    <a href="#fallas">Si algo falla</a>
+  </nav>
+
+  <!-- 1 -->
+  <div class="lectura"><h2 id="funciona">Cómo funciona</h2>
+    <p>Una operación desde que el cliente pulsa «Enviar» hasta que la plata sale, pide un código o espera a un analista.</p></div>
+  <figure>
+    <div class="lienzo">
+<pre class="mermaid" aria-label="Diagrama de flujo de una operación en Escudo Yuma">
+flowchart TD
+  A(["Cliente pulsa Enviar en la billetera"]) --> B{"¿Destino y monto válidos?"}
+  B -->|No| B1["Error junto al campo, sin llamar a aegix"]
+  B -->|Sí| C["Función de Vercel: agrega IP, país y token"]
+  C --> D["Túnel → consola → aegix POST /v1/autorizar"]
+  D --> E{"¿Esquema válido y dentro del límite de tasa?"}
+  E -->|No| E1["Rechazar con 400 o 429"]
+  E -->|Sí| F["Señales: dispositivo, SIM, clave, Tor, destino, historial del cliente"]
+  F --> G["Puntaje = suma de pesos, de 0 a 1"]
+  G --> H{"Umbrales · recargas y servicios bajan un escalón"}
+  H -->|menos de 0,35| AP["Aprobar"]
+  H -->|0,35 a 0,65| DE["Desafiar"]
+  H -->|0,65 o más con señal ajena al origen| RE["Retener"]
+  AP --> AP1["La plata sale: ¡Listo!"]
+  DE --> DE1["Código por SMS: no vence y se puede escuchar"]
+  DE1 --> DE2{"¿Código correcto?"}
+  DE2 -->|Sí| AP1
+  DE2 -->|No, tras 3 intentos| X1["Cancelada: no se mueve plata"]
+  RE --> RE1["En revisión: la plata no sale"]
+  RE1 --> K["La consola muestra el caso en 2 s o menos, con razones y cómo contactar al cliente"]
+  K --> L{"El analista decide"}
+  L -->|Liberar| AP2["La billetera se entera en 4 s o menos, descuenta y avisa"]
+  L -->|Confirmar fraude| X2["Bloqueada: la plata sigue en la cuenta"]
+  AP2 --> M["La resolución queda como etiqueta para recalibrar las reglas"]
+  X2 --> M
+  classDef ok stroke:#17704A,stroke-width:2px
+  classDef alerta stroke:#B07A10,stroke-width:2px
+  classDef mal stroke:#C2401F,stroke-width:2px
+  class AP,AP1,AP2 ok
+  class DE,DE1 alerta
+  class RE,RE1,E1,X1,X2 mal
+</pre>
+    </div>
+    <figcaption>Cada decisión, en cualquier rama, queda en la auditoría con su versión de reglas y una referencia HMAC. aegix decide en unos 3 ms; con la red, la billetera responde en unos 100 ms. Las preferencias de accesibilidad del cliente viajan con la operación, solo las ve el analista y nunca cambian el puntaje.</figcaption>
+  </figure>
+
+  <!-- 2 -->
+  <div class="lectura"><h2 id="ejecutar">Cómo ejecutarlo al presentar</h2>
+    <p>Elige la ruta según lo que tengas a mano ese día. Las tres muestran lo mismo; solo cambia desde dónde se abre.</p></div>
+  <figure>
+    <div class="lienzo">
+<pre class="mermaid" aria-label="Diagrama de flujo para elegir cómo ejecutar la demo">
+flowchart TD
+  S(["30 minutos antes"]) --> Q1{"¿Internet estable y cuentas de Vercel y ngrok listas?"}
+  Q1 -->|Sí| A1["Ruta A · pública: iniciar.sh --tunel --demo-limpia"]
+  Q1 -->|No| Q2{"¿Docker instalado?"}
+  Q2 -->|Sí| B1["Ruta B · Docker: docker compose up --build"]
+  Q2 -->|No| C1["Ruta C · local: iniciar.sh --demo-limpia y la billetera con node"]
+  A1 --> V{"¿/salud responde y la consola dice Actualizado ahora?"}
+  B1 --> V
+  C1 --> V
+  V -->|No| F["Revisa Si algo falla o baja a la ruta siguiente"]
+  F --> Q2
+  V -->|Sí| P["Billetera: Restablecer la demo, Laura con preferencia de contacto"]
+  P --> W["Billetera a la izquierda, consola a la derecha"]
+  W --> D(["Presentar el guion de 5 minutos"])
+  D --> E{"¿Algo se cae en vivo?"}
+  E -->|Sí| R["Sigue en la ruta C o pon el video grabado"]
+  classDef ruta stroke:#6E73A0,stroke-width:2px
+  class A1,B1,C1 ruta
+</pre>
+    </div>
+    <figcaption>La ruta A es la única que el jurado puede abrir desde su propio celular. B y C corren en tu equipo: proyecta la pantalla.</figcaption>
+  </figure>
+
+  <!-- 3 -->
+  <div class="lectura"><h2 id="comandos">Comandos</h2>
+    <p>Desde la carpeta del proyecto. Cada bloque tiene su botón para copiar.</p></div>
+  <div class="rutas">
+    <section class="ruta" aria-labelledby="ruta-a">
+      <header><h3 id="ruta-a">Pública</h3><span class="letra" aria-hidden="true">A</span></header>
+      <p class="cuando">Con internet, una cuenta de Vercel con la billetera desplegada y ngrok con dominio fijo (ver <code>docs/despliegue.md</code>).</p>
+      <div class="cmd-caja">
+        <span class="titulo-cmd">1. Claves y arranque</span>
+        <pre class="cmd" id="cmd-a1">export YUMA_PANEL_TOKEN=tu-token
+export YUMA_PANEL_CLAVE=tu-contraseña
+export NGROK_DOMINIO=aegix-demo.ngrok-free.app
+herramientas/iniciar.sh --tunel --demo-limpia</pre>
+        <button class="copiar" type="button" data-copiar="cmd-a1">Copiar</button>
+      </div>
+      <div class="cmd-caja">
+        <span class="titulo-cmd">2. Comprobar (otra terminal)</span>
+        <pre class="cmd" id="cmd-a2">curl https://aegix-demo.ngrok-free.app/salud</pre>
+        <button class="copiar" type="button" data-copiar="cmd-a2">Copiar</button>
+      </div>
+      <ul class="abrir">
+        <li>Billetera: <code>https://tu-proyecto.vercel.app</code></li>
+        <li>Consola: <code>https://aegix-demo.ngrok-free.app</code></li>
+      </ul>
+    </section>
+
+    <section class="ruta" aria-labelledby="ruta-b">
+      <header><h3 id="ruta-b">Docker</h3><span class="letra" aria-hidden="true">B</span></header>
+      <p class="cuando">Sin internet confiable, en un equipo con Docker. No hace falta instalar Go ni Node.</p>
+      <div class="cmd-caja">
+        <span class="titulo-cmd">Un solo comando</span>
+        <pre class="cmd" id="cmd-b1">docker compose up --build</pre>
+        <button class="copiar" type="button" data-copiar="cmd-b1">Copiar</button>
+      </div>
+      <ul class="abrir">
+        <li>Billetera: <code>http://127.0.0.1:3000</code></li>
+        <li>Consola: <code>http://127.0.0.1:4173</code></li>
+      </ul>
+      <p class="nota">La auditoría se guarda en un volumen de Docker y sobrevive a <code>docker compose down</code>.</p>
+    </section>
+
+    <section class="ruta" aria-labelledby="ruta-c">
+      <header><h3 id="ruta-c">Local</h3><span class="letra" aria-hidden="true">C</span></header>
+      <p class="cuando">El plan B de siempre: Go 1.22+ y Node 20+, sin internet.</p>
+      <div class="cmd-caja">
+        <span class="titulo-cmd">Terminal 1: aegix y consola</span>
+        <pre class="cmd" id="cmd-c1">herramientas/iniciar.sh --demo-limpia</pre>
+        <button class="copiar" type="button" data-copiar="cmd-c1">Copiar</button>
+      </div>
+      <div class="cmd-caja">
+        <span class="titulo-cmd">Terminal 2: billetera</span>
+        <pre class="cmd" id="cmd-c2">AEGIX_URL=http://127.0.0.1:8081 node yuma-billetera/dev.mjs</pre>
+        <button class="copiar" type="button" data-copiar="cmd-c2">Copiar</button>
+      </div>
+      <ul class="abrir">
+        <li>Billetera: <code>http://localhost:3000</code></li>
+        <li>Consola: <code>http://127.0.0.1:4173</code></li>
+      </ul>
+    </section>
+  </div>
+  <p class="nota lectura"><code>--demo-limpia</code> archiva la auditoría anterior en <code>datos/archivo/</code>; nunca la borra. Ctrl+C en la terminal 1 apaga aegix y la consola.</p>
+
+  <!-- 4 -->
+  <div class="lectura"><h2 id="revisar">Antes de empezar</h2>
+    <p>Marca cada punto. Las marcas se guardan solo en este navegador.</p></div>
+  <ul class="verificar" id="verificar">
+    <li><label><input type="checkbox" id="v1"><span>La terminal muestra «aegix: http://127.0.0.1:8081/salud» y «consola: http://127.0.0.1:4173».</span></label></li>
+    <li><label><input type="checkbox" id="v2"><span>La consola dice «Actualizado ahora» en la cabecera y la vista es «Toda la actividad».</span></label></li>
+    <li><label><input type="checkbox" id="v3"><span>La billetera muestra «aegix protegiendo» al entrar.</span></label></li>
+    <li><label><input type="checkbox" id="v4"><span>En la billetera: Seguridad → Restablecer la demo.</span></label></li>
+    <li><label><input type="checkbox" id="v5"><span>Ingresar como Laura (300 000 0001, clave 1111) → Accesibilidad → «Videollamada con intérprete de lengua de señas».</span></label></li>
+    <li><label><input type="checkbox" id="v6"><span>Billetera y consola visibles lado a lado; el diagrama de arquitectura abierto en otra pestaña.</span></label></li>
+    <li><label><input type="checkbox" id="v7"><span>El video de respaldo está en el escritorio.</span></label></li>
+  </ul>
+  <button class="copiar reiniciar" type="button" id="limpiar">Desmarcar todo</button>
+
+  <!-- 5 -->
+  <div class="lectura"><h2 id="guion">Guion de 5 minutos</h2>
+    <p>Una persona habla y otra opera. El detalle con las frases completas está en <code>docs/guion-demo.md</code>.</p></div>
+  <div class="tabla"><table>
+    <thead><tr><th>Tiempo</th><th>Qué se muestra</th><th>Qué debe verse</th></tr></thead>
+    <tbody>
+      <tr><td>0:00–0:30</td><td>El problema: el fraude se detecta 15 minutos tarde y 89 % de las alertas son falsas</td><td>Pantalla de inicio de la billetera</td></tr>
+      <tr><td>0:30–1:00</td><td>Cómo funciona, con el primer diagrama de esta página</td><td>Cliente → aegix → decisión → analista</td></tr>
+      <tr><td>1:00–1:30</td><td>Laura paga $50.000 a Andrés</td><td>«¡Listo!» y «aprobar» en la consola</td></tr>
+      <tr><td>1:30–2:15</td><td>Seguridad → Toma de cuenta, envío de $300.000 a 300 999 0000</td><td>«En revisión»; el caso arriba con puntaje 1,00 y «Contacto accesible»</td></tr>
+      <tr><td>2:15–2:45</td><td>Abrir el caso, leer cómo contactar a Laura, Confirmar fraude</td><td>«Bloqueada por fraude» en la billetera en menos de 4 s</td></tr>
+      <tr><td>2:45–3:05</td><td>SIM swapping, envío a Andrés</td><td>Pide código; «Escuchar código»; se confirma</td></tr>
+      <tr><td>3:05–3:25</td><td>Julián (cuenta de 21 días) envía todo a un número nuevo</td><td>Pide código: patrón de cuenta mula</td></tr>
+      <tr><td>3:25–3:45</td><td>Accesibilidad <span class="nuevo">nuevo</span>: activar Lectura fácil y abrir un movimiento</td><td>Razones en frases cortas; aegix decide igual, con o sin preferencias</td></tr>
+      <tr><td>3:45–4:20</td><td>Resultados con las 120.972 transacciones del reto</td><td>81,5 % detectado frente a 62,6 %; 17,7 % de falsos positivos frente a 89 %</td></tr>
+      <tr><td>4:20–4:45</td><td>No es una caja negra: el puntaje es una suma de pesos</td><td>Sección 4 de <code>docs/arquitectura.html</code></td></tr>
+      <tr><td>4:45–5:00</td><td>Cierre</td><td>Consola con el pulso en vivo</td></tr>
+    </tbody>
+  </table></div>
+
+  <!-- 6 -->
+  <div class="lectura"><h2 id="fallas">Si algo falla</h2></div>
+  <div class="tabla"><table>
+    <thead><tr><th>Síntoma</th><th>Causa probable</th><th>Qué hacer</th></tr></thead>
+    <tbody>
+      <tr><td>«aegix sin conexión»</td><td>aegix apagado, túnel caído o <code>AEGIX_URL</code> mal escrita en Vercel</td><td><code>curl …/salud</code>. Si falla, reinicia <code>iniciar.sh</code>; si responde, revisa <code>AEGIX_URL</code> en Vercel y vuelve a desplegar</td></tr>
+      <tr><td>«Sin respuesta de aegix»</td><td>La consola corre, pero aegix se detuvo</td><td>Mira la terminal 1 y vuelve a correr el script</td></tr>
+      <tr><td>La consola pide contraseña</td><td>Arrancó con <code>YUMA_PANEL_CLAVE</code></td><td>Usuario cualquiera; la contraseña es esa variable</td></tr>
+      <tr><td>«address already in use»</td><td>Otra copia sigue corriendo en 8081, 4173 o 3000</td><td>Ciérrala con Ctrl+C en su terminal o cierra esa terminal</td></tr>
+      <tr><td>La dirección del túnel cambió</td><td>Se usó el túnel rápido, sin dominio fijo</td><td>Define <code>NGROK_DOMINIO</code> antes de arrancar</td></tr>
+      <tr><td>El envío no aparece en la consola</td><td>La vista es «Casos» y la operación fue aprobada</td><td>Cambia a «Toda la actividad»</td></tr>
+      <tr><td>Nada responde</td><td>Red del lugar o equipo</td><td>Ruta C sin internet; si tampoco, el video</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<script>
+document.querySelectorAll('[data-copiar]').forEach((boton) => {
+  boton.addEventListener('click', async () => {
+    const pre = document.getElementById(boton.dataset.copiar);
+    try {
+      await navigator.clipboard.writeText(pre.textContent);
+      boton.textContent = 'Copiado';
+    } catch {
+      const rango = document.createRange();
+      rango.selectNodeContents(pre);
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(rango);
+      boton.textContent = 'Seleccionado: copia con Ctrl+C';
+    }
+    setTimeout(() => { boton.textContent = 'Copiar'; }, 2500);
+  });
+});
+const casillas = [...document.querySelectorAll('#verificar input')];
+const CLAVE = 'presentar-escudo-yuma';
+try { const v = JSON.parse(localStorage.getItem(CLAVE) || '{}'); casillas.forEach((c) => { c.checked = !!v[c.id]; }); } catch { /* sin almacenamiento */ }
+const guardar = () => { try { localStorage.setItem(CLAVE, JSON.stringify(Object.fromEntries(casillas.map((c) => [c.id, c.checked])))); } catch { /* sin almacenamiento */ } };
+casillas.forEach((c) => c.addEventListener('change', guardar));
+document.getElementById('limpiar').addEventListener('click', () => { casillas.forEach((c) => { c.checked = false; }); guardar(); });
+</script>

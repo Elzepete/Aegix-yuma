@@ -20,6 +20,16 @@ type Datos struct {
 	VersionApp         string `json:"version_app"`
 	SistemaOperativo   string `json:"sistema_operativo"`
 	HuellaDispositivo  string `json:"huella_dispositivo"`
+	// Opcional: cómo prefiere el cliente que lo contacten si un analista revisa su operación.
+	// Nunca entra al puntaje.
+	Accesibilidad *Accesibilidad `json:"accesibilidad,omitempty"`
+}
+
+// Accesibilidad guarda preferencias de comunicación, no diagnósticos ni datos de salud.
+type Accesibilidad struct {
+	Contacto     string `json:"contacto,omitempty"` // sms, llamada, videollamada_lsc (lengua de señas) o chat
+	LecturaFacil bool   `json:"lectura_facil,omitempty"`
+	Apoyo        bool   `json:"apoyo_de_confianza,omitempty"` // lo acompaña una persona de apoyo (Ley 1996 de 2019)
 }
 
 type Origen struct {

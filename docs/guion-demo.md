@@ -1,5 +1,8 @@
 # Guion de demo · 5 minutos
 
+Diagramas de flujo, comandos por ruta y lista de verificación: [presentacion.html](presentacion.html)
+(versión para GitHub en [flujo.md](flujo.md)).
+
 Dos pantallas lado a lado: a la izquierda la **billetera** (celular o ventana angosta), a la derecha la
 **consola aegix** en «Toda la actividad». Una persona habla y otra opera.
 
@@ -9,7 +12,8 @@ Dos pantallas lado a lado: a la izquierda la **billetera** (celular o ventana an
    definidas (ver [despliegue.md](despliegue.md)). La auditoría anterior queda archivada, no se borra.
 2. `curl https://<dominio>/salud` → `{"estado":"ok"}` y `curl https://<proyecto>.vercel.app/api/autorizar` →
    `"en_linea"`.
-3. En la billetera: *Seguridad → Restablecer la demo*. Ingresa como Laura (300 000 0001, clave 1111).
+3. En la billetera: *Seguridad → Restablecer la demo*. Ingresa como Laura (300 000 0001, clave 1111) y en
+   *Accesibilidad* elige «Videollamada con intérprete de lengua de señas».
 4. Abre la consola, escribe la contraseña y deja visible «Toda la actividad». La cabecera debe decir «Actualizado ahora».
 5. Ten abierto [arquitectura.html](arquitectura.html) en otra pestaña, en la sección 1.
 6. Graba la demo una vez completa como video de respaldo.
@@ -22,10 +26,11 @@ Dos pantallas lado a lado: a la izquierda la **billetera** (celular o ventana an
 | 0:30–1:00 | «La billetera pide permiso a aegix antes de cada operación. aegix decide en 3 milisegundos y el analista lo ve en vivo.» | Diagrama, sección 1: cliente → Vercel → túnel → consola → aegix. |
 | 1:00–1:30 | «Laura le paga a su contacto de siempre.» | Enviar $50.000 a Andrés → **¡Listo!** En la consola aparece «aprobar» en menos de 2 s. |
 | 1:30–2:15 | «Ahora alguien le robó la cuenta: cambió la SIM, entra por Tor desde un celular nuevo y manda la plata a un número que Laura nunca usó.» | *Seguridad → Toma de cuenta*. Enviar $300.000 a 300 999 0000 → **En revisión**. En la consola, el caso arriba: puntaje 1,00 (dispositivo nuevo, Tor, SIM, destino nuevo) y sus razones en orden. |
-| 2:15–2:45 | «La plata no salió. El analista ve por qué y decide.» | Abrir el caso → *Confirmar fraude* → confirmar. En la billetera: **Bloqueada por fraude** en menos de 4 s. |
-| 2:45–3:15 | «Si es el cliente legítimo con un SIM nuevo, no lo bloqueamos: le pedimos un código.» | *Seguridad → SIM swapping*. Enviar a Andrés → **código**. Escribirlo → listo. |
-| 3:15–3:40 | «Las cuentas mula son el 35 % del fraude.» | *Salir*, ingresar como Julián (300 000 0004, clave 4444, cuenta de 21 días). Enviar «Todo» a un número nuevo → **código**. |
-| 3:40–4:20 | «Con las 120.972 operaciones del reto: detectamos 81,5 % del fraude, antes de autorizar, frente al 62,6 % de hoy. Los falsos positivos bajan de 89 % a 17,7 %. Decidimos en 5 ms en el peor 1 %.» | Diagrama, sección 8. |
+| 2:15–2:45 | «La plata no salió. El analista ve por qué, y cómo contactar a Laura: ella pidió videollamada con intérprete de lengua de señas.» | Abrir el caso (etiqueta «Contacto accesible») → *Confirmar fraude* → confirmar. En la billetera: **Bloqueada por fraude** en menos de 4 s. |
+| 2:45–3:05 | «Si es el cliente legítimo con un SIM nuevo, no lo bloqueamos: le pedimos un código, que además se puede escuchar.» | *Seguridad → SIM swapping*. Enviar a Andrés → **código** → *Escuchar código* → escribirlo. |
+| 3:05–3:25 | «Las cuentas mula son el 35 % del fraude.» | *Salir*, ingresar como Julián (300 000 0004, clave 4444, cuenta de 21 días). Enviar «Todo» a un número nuevo → **código**. |
+| 3:25–3:45 | «La seguridad no puede dejar a nadie por fuera. Con lectura fácil, cada decisión se explica en frases cortas. Y probamos que las preferencias de accesibilidad nunca cambian el puntaje.» | *Accesibilidad → Lectura fácil*. Abrir un movimiento: razones en lenguaje sencillo. |
+| 3:45–4:20 | «Con las 120.972 operaciones del reto: detectamos 81,5 % del fraude, antes de autorizar, frente al 62,6 % de hoy. Los falsos positivos bajan de 89 % a 17,7 %. Decidimos en 5 ms en el peor 1 %.» | Diagrama, sección 8. |
 | 4:20–4:45 | «No es una caja negra: el puntaje es una suma de pesos que cualquiera puede rehacer, y cada resolución del analista entra a la próxima calibración.» | Diagrama, secciones 4 y 5. |
 | 4:45–5:00 | «aegix: el fraude se frena antes, el cliente legítimo casi no lo nota y el analista sabe por qué.» | Consola con el pulso en vivo. |
 
@@ -38,6 +43,9 @@ Dos pantallas lado a lado: a la izquierda la **billetera** (celular o ventana an
 - **¿Y la privacidad?** aegix no guarda nombres ni celulares en claro: el identificador de la operación queda como
   HMAC. Ninguna regla usa edad, región ni ingresos.
 - **¿Qué fraude se les escapa?** El engaño con QR casi no deja señales técnicas; lo decimos en el reporte.
+- **¿Cómo apoya a personas con discapacidad?** La billetera tiene texto grande, alto contraste, lectura fácil,
+  lectura en voz alta y funciona con lector de pantalla y teclado. El cliente elige cómo lo contactan (incluida
+  lengua de señas) y aegix se lo muestra al analista sin usarlo para decidir; hay una prueba que lo garantiza.
 - **¿Escala?** Más de 1.100 operaciones por segundo en un portátil; el pico exigido es 150.
 
 ## Plan B
