@@ -118,7 +118,10 @@ flowchart TD
   H -->|menos de 0,35| AP["Aprobar"]
   H -->|0,35 a 0,65| DE["Desafiar"]
   H -->|0,65 o más con señal ajena al origen| RE["Retener"]
-  AP --> AP1["La plata sale: ¡Listo!"]
+  AP --> TR{"¿Es una transferencia?"}
+  TR -->|No| AP1["La plata sale: ¡Listo!"]
+  TR -->|Sí| CF["Confirmar la transferencia con un código atado al monto y al destino"]
+  CF --> DE2
   DE --> DE1["Código al celular: vale 10 minutos, se puede pedir otro y escuchar"]
   DE1 --> DE2{"¿Código correcto?"}
   DE2 -->|Sí| AP1
@@ -256,12 +259,12 @@ herramientas/iniciar.sh --tunel --demo-limpia</pre>
     <tbody>
       <tr><td>0:00–0:30</td><td>El problema: el fraude se detecta 15 minutos tarde y 89 % de las alertas son falsas</td><td>Pantalla de inicio de la billetera</td></tr>
       <tr><td>0:30–1:00</td><td>Cómo funciona, con el primer diagrama de esta página</td><td>Cliente → aegix → decisión → analista</td></tr>
-      <tr><td>1:00–1:30</td><td>Laura entra con su clave y el código que llega al celular; paga $50.000 a Andrés</td><td>«¡Listo!», «aprobar» en la consola y el aviso en el celular</td></tr>
+      <tr><td>1:00–1:30</td><td>Laura entra con su clave y el código que llega al celular; envía $50.000 a Andrés y confirma la transferencia con otro código</td><td>«Verificada y enviada», «aprobar» en la consola y los avisos en el celular</td></tr>
       <tr><td>1:30–2:15</td><td>Seguridad → Toma de cuenta, envío de $300.000 a 300 999 0000</td><td>«En revisión»; el caso arriba con puntaje 1,00 y «Contacto accesible»</td></tr>
       <tr><td>2:15–2:45</td><td>Abrir el caso, leer cómo contactar a Laura, Confirmar fraude</td><td>«Bloqueada por fraude» en la billetera en menos de 4 s</td></tr>
       <tr><td>2:45–3:05</td><td>SIM swapping, envío a Andrés</td><td>Pide código; «Escuchar código»; se confirma</td></tr>
       <tr><td>3:05–3:25</td><td>Julián (cuenta de 21 días) envía todo a un número nuevo</td><td>Pide código: patrón de cuenta mula</td></tr>
-      <tr><td>3:25–3:45</td><td>Accesibilidad <span class="nuevo">nuevo</span>: activar Lectura fácil y abrir un movimiento</td><td>Razones en frases cortas; aegix decide igual, con o sin preferencias</td></tr>
+      <tr><td>3:25–3:45</td><td>Accesibilidad <span class="nuevo">nuevo</span>: activar Lectura fácil en la billetera y abrir el menú Accesibilidad de la consola</td><td>Razones en frases cortas; la consola filtra «Contacto accesible»; aegix decide igual, con o sin preferencias</td></tr>
       <tr><td>3:45–4:20</td><td>Resultados con las 120.972 transacciones del reto</td><td>81,5 % detectado frente a 62,6 %; 17,7 % de falsos positivos frente a 89 %</td></tr>
       <tr><td>4:20–4:45</td><td>No es una caja negra: el puntaje es una suma de pesos</td><td>Sección 4 de <code>docs/arquitectura.html</code></td></tr>
       <tr><td>4:45–5:00</td><td>Cierre</td><td>Consola con el pulso en vivo</td></tr>
@@ -279,6 +282,7 @@ herramientas/iniciar.sh --tunel --demo-limpia</pre>
       <tr><td>«address already in use»</td><td>Otra copia sigue corriendo en 8081, 4173 o 3000</td><td>Ciérrala con Ctrl+C en su terminal o cierra esa terminal</td></tr>
       <tr><td>La dirección del túnel cambió</td><td>Se usó el túnel rápido, sin dominio fijo</td><td>Define <code>NGROK_DOMINIO</code> antes de arrancar</td></tr>
       <tr><td>El envío no aparece en la consola</td><td>La vista es «Casos» y la operación fue aprobada</td><td>Cambia a «Toda la actividad»</td></tr>
+      <tr><td>No se escucha la voz</td><td>En Linux el navegador necesita speech-dispatcher y una voz</td><td><code>sudo pacman -S speech-dispatcher espeak-ng</code> (Arch, CachyOS) o <code>sudo apt install speech-dispatcher espeak-ng</code> (Ubuntu); reinicia el navegador. En el celular funciona sin instalar nada</td></tr>
       <tr><td>Nada responde</td><td>Red del lugar o equipo</td><td>Ruta C sin internet; si tampoco, el video</td></tr>
     </tbody>
   </table></div>

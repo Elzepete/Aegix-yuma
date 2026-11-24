@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Alerta, Indicadores } from './tipos';
 import { Cola, Latencia, Mezcla, Pulso, Revision, Senales, type Metricas } from './components/Consola';
 import { PruebaTransacciones } from './components/PruebaTransacciones';
+import { alCambiarVoces, estadoVoz, hablar } from './voz';
 
 async function leer<T>(ruta: string, signal: AbortSignal): Promise<T> {
   const res = await fetch(ruta, { signal, cache: 'no-store' });
@@ -41,12 +42,54 @@ const ORIGENES = { todas: 'Todas', billetera: 'Billetera', sandbox: 'Sandbox' } 
 const ORDEN = { riesgo: 'Mayor riesgo', recientes: 'Más recientes' } as const;
 const VISTA = { casos: 'Casos', actividad: 'Toda la actividad' } as const;
 
+// Ajustes de accesibilidad de quien opera la consola; se guardan en este navegador.
+const AJUSTES = {
+  texto: ['Texto más grande', 'Agranda toda la consola.'],
+  contraste: ['Alto contraste', 'Textos secundarios y bordes más marcados.'],
+  movimiento: ['Sin animaciones', 'Quita el destello de los casos nuevos y las transiciones.'],
+  voz: ['Leer casos nuevos en voz alta', 'Anuncia por voz cada caso nuevo por resolver.'],
+} as const;
+type Ajustes = Record<keyof typeof AJUSTES, boolean>;
+function leerAjustes(): Ajustes {
+  const base = { texto: false, contraste: false, movimiento: false, voz: false };
+  try { return { ...base, ...JSON.parse(localStorage.getItem('aegix.accesibilidad') ?? '{}') }; } catch { return base; }
+}
+
+function Accesibilidad({ ajustes, cambiar }: { ajustes: Ajustes; cambiar: (a: Ajustes) => void }) {
+  const [voz, setVoz] = useState(estadoVoz());
+  const [problema, setProblema] = useState('');
+  useEffect(() => alCambiarVoces(() => setVoz(estadoVoz())), []);
+  return (
+    <section id="panel-accesibilidad" className="panel-accesibilidad" aria-label="Accesibilidad de la consola">
+      {Object.entries(AJUSTES).map(([clave, [titulo, texto]]) => (
+        <label key={clave} className="ajuste">
+          <input type="checkbox" role="switch" checked={ajustes[clave as keyof Ajustes]}
+                 onChange={(e) => cambiar({ ...ajustes, [clave]: e.target.checked })} />
+          <span><b>{titulo}</b><small>{texto}</small></span>
+        </label>
+      ))}
+      <p className="estado-voz">{problema || voz}</p>
+      <button type="button" className="boton" onClick={() => setProblema(hablar('Consola aegix. Así se anunciarán los casos nuevos.'))}>Probar la voz</button>
+    </section>
+  );
+}
+
 export default function App() {
   const [revision, setRevision] = useState(0);
   const [enVivo, setEnVivo] = useState(true);
   const [origen, setOrigen] = useState<keyof typeof ORIGENES>('todas');
   const [orden, setOrden] = useState<keyof typeof ORDEN>('recientes');
   // Por defecto, toda la actividad: un envío aprobado de la billetera no aparece en «Casos».
+  const [ajustes, setAjustes] = useState<Ajustes>(leerAjustes);
+  const [abrirAjustes, setAbrirAjustes] = useState(false);
+  const [soloAccesible, setSoloAccesible] = useState(false);
+  useEffect(() => {
+    const raiz = document.documentElement;
+    raiz.toggleAttribute('data-texto-grande', ajustes.texto);
+    raiz.toggleAttribute('data-contraste', ajustes.contraste);
+    raiz.toggleAttribute('data-sin-movimiento', ajustes.movimiento);
+    try { localStorage.setItem('aegix.accesibilidad', JSON.stringify(ajustes)); } catch { /* sin almacenamiento */ }
+  }, [ajustes]);
   const [vista, setVistaEstado] = useState<keyof typeof VISTA>(() => leerPreferencia('aegix.vista', ['casos', 'actividad'] as const, 'actividad'));
   const setVista = (v: keyof typeof VISTA) => { setVistaEstado(v); try { localStorage.setItem('aegix.vista', v); } catch { /* sin almacenamiento */ } };
   const { datos: indicadores } = useDatosGo<Indicadores>('/api/indicadores', revision);
@@ -82,11 +125,11 @@ export default function App() {
 
   const fuente = vista === 'actividad' ? actividad : alertas;
   const visibles = useMemo(() => {
-    const lista = (fuente ?? []).filter((a) => origen === 'todas' || (a.origen ?? 'sandbox') === origen);
+    const lista = (fuente ?? []).filter((a) => (origen === 'todas' || (a.origen ?? 'sandbox') === origen) && (!soloAccesible || !!a.entrada?.accesibilidad));
     return orden === 'recientes'
       ? [...lista].sort((a, b) => b.registrado_en.localeCompare(a.registrado_en))
       : lista; // aegix ya las entrega ordenadas por puntaje
-  }, [fuente, origen, orden]);
+  }, [fuente, origen, orden, soloAccesible]);
 
   const pendientes = (alertas ?? []).filter((a) => a.decision === 'retener' && !a.resolucion).length;
   const sinConexion = !!(error && errorMetricas);
@@ -98,6 +141,7 @@ export default function App() {
     if (!alertas) return;
     const nuevos = previos.current === null ? 0 : pendientes - previos.current;
     previos.current = pendientes;
+    if (nuevos > 0 && ajustes.voz) hablar(`${nuevos === 1 ? 'Un caso nuevo' : `${nuevos} casos nuevos`} por resolver.`);
     if (nuevos > 0) setAnuncio(`${nuevos === 1 ? 'Un caso nuevo' : `${nuevos} casos nuevos`} por resolver. Total pendientes: ${pendientes}.`);
   }, [alertas, pendientes]);
   useEffect(() => { if (sinConexion) setAnuncio('Se perdió la conexión con aegix.'); }, [sinConexion]);
@@ -121,11 +165,17 @@ export default function App() {
               : segundosDesde === null ? 'Conectando…'
               : segundosDesde < 3 ? 'Actualizado ahora' : `Actualizado hace ${segundosDesde} s`}
           </span>
+          <button type="button" className="boton-vivo" aria-expanded={abrirAjustes} aria-controls="panel-accesibilidad"
+                  onClick={() => setAbrirAjustes((v) => !v)}>
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="4.5" r="2" /><path d="M5 8.5l7 1.5 7-1.5M12 10v4.5m0 0L9 21m3-6.5l3 6.5" /></svg>
+            Accesibilidad
+          </button>
           <button type="button" className="boton-vivo" aria-pressed={enVivo} onClick={() => setEnVivo((v) => !v)}>
             <i aria-hidden="true" />{enVivo ? 'En vivo' : 'Pausado'}
           </button>
         </div>
       </header>
+      {abrirAjustes && <Accesibilidad ajustes={ajustes} cambiar={setAjustes} />}
 
       <p className="sr-only" aria-live="polite">{anuncio}</p>
       <main className="contenido">
@@ -148,6 +198,9 @@ export default function App() {
                     <button key={k} type="button" aria-pressed={origen === k} onClick={() => setOrigen(k as keyof typeof ORIGENES)}>{t}</button>
                   ))}
                 </div>
+                <button type="button" className="filtro-accesible" aria-pressed={soloAccesible} onClick={() => setSoloAccesible((v) => !v)}>
+                  Contacto accesible
+                </button>
                 <div className="segmentado" role="group" aria-label="Orden">
                   {Object.entries(ORDEN).map(([k, t]) => (
                     <button key={k} type="button" aria-pressed={orden === k} onClick={() => setOrden(k as keyof typeof ORDEN)}>{t}</button>
@@ -159,7 +212,7 @@ export default function App() {
           </section>
 
           <aside className="costado" aria-label="Contexto">
-            <Revision ind={indicadores} pendientes={pendientes} />
+            <Revision ind={indicadores} pendientes={pendientes} accesibles={(alertas ?? []).filter((a) => a.decision === 'retener' && !a.resolucion && a.entrada?.accesibilidad).length} />
             <Mezcla porOrigen={metricas?.decisiones_por_origen} />
             <Senales modalidades={metricas?.modalidades_detectadas} />
             <Latencia cubetas={metricas?.histograma_latencia_ms} sla={metricas?.sla_maximo_ms ?? 300} />

@@ -388,7 +388,7 @@ func TestAvisosAlCelularSoloDeLaBilletera(t *testing.T) {
 	enviar(t, h, "/v1/autorizar", solicitudBase("YW-AVISO"))
 	select {
 	case titulo := <-titulos:
-		if titulo != "Yuma · Operación aprobada" {
+		if titulo != "Yuma · aegix aprobó la operación" {
 			t.Fatalf("primer aviso %q: /score no debía avisar", titulo)
 		}
 	case <-time.After(2 * time.Second):

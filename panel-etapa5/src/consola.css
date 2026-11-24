@@ -165,3 +165,18 @@ h3 { font-size: 13px; font-weight: 600; margin: 0; }
 /* Preferencias de contacto del cliente (accesibilidad) */
 .contacto-accesible { display: inline-flex; margin-left: 8px; font-size: 12px; font-weight: 500; color: var(--yuma); }
 .preferencia-contacto { margin: 0 0 12px; padding: 10px 12px; border-radius: 6px; border: 1px solid var(--yuma); color: var(--texto); }
+
+/* Menú de accesibilidad de la consola */
+.panel-accesibilidad { margin: 0 auto; max-width: 1400px; padding: 14px 24px; display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center;
+  background: var(--superficie); border-bottom: 1px solid var(--linea-fuerte); }
+.ajuste { display: flex; gap: 10px; align-items: flex-start; min-width: 220px; flex: 1 1 220px; cursor: pointer; }
+.ajuste input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--yuma); flex: none; }
+.ajuste span { display: grid; }
+.ajuste small { color: var(--suave); font-size: 12px; }
+.estado-voz { flex-basis: 100%; margin: 0; color: var(--suave); font-size: 12.5px; }
+.filtro-accesible { border: 1px solid var(--linea); background: var(--fondo); color: var(--suave); border-radius: 7px; padding: 3px 10px; font-size: 12.5px; }
+.filtro-accesible[aria-pressed="true"] { color: var(--texto); border-color: var(--yuma); background: color-mix(in srgb, var(--yuma) 14%, transparent); }
+html[data-texto-grande] body { zoom: 1.2; }
+html[data-contraste] { --suave: var(--texto); --tenue: var(--texto); --linea: color-mix(in srgb, var(--texto) 40%, transparent); --linea-fuerte: color-mix(in srgb, var(--texto) 55%, transparent); }
+html[data-contraste] .etiqueta, html[data-contraste] .panel { border: 1px solid var(--linea-fuerte); }
+html[data-sin-movimiento] *, html[data-sin-movimiento] *::before, html[data-sin-movimiento] *::after { animation: none !important; transition: none !important; }

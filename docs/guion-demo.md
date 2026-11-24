@@ -25,7 +25,7 @@ Dos pantallas lado a lado: a la izquierda la **billetera** (celular o ventana an
 | --- | --- | --- |
 | 0:00–0:30 | «Hoy Yuma Pay detecta el fraude 15 minutos después de que la plata salió, y 89 de cada 100 alertas son falsas. aegix decide *antes* de que salga un peso.» | Pantalla de inicio de la billetera. |
 | 0:30–1:00 | «La billetera pide permiso a aegix antes de cada operación. aegix decide en 3 milisegundos y el analista lo ve en vivo.» | Diagrama, sección 1: cliente → Vercel → túnel → consola → aegix. |
-| 1:00–1:30 | «Laura entra con su clave y un código que le llega al celular. Le paga a su contacto de siempre.» | Mostrar la notificación de ntfy. Enviar $50.000 a Andrés → **¡Listo!** «aprobar» en la consola en menos de 2 s y el aviso en el celular. |
+| 1:00–1:30 | «Laura entra con su clave y un código que le llega al celular. Le paga a su contacto de siempre.» | Mostrar la notificación de ntfy. Enviar $50.000 a Andrés → aegix aprueba y la billetera pide **confirmar la transferencia** con el código del celular → **Verificada y enviada**. «aprobar» en la consola en menos de 2 s. |
 | 1:30–2:15 | «Ahora alguien le robó la cuenta: cambió la SIM, entra por Tor desde un celular nuevo y manda la plata a un número que Laura nunca usó.» | *Seguridad → Toma de cuenta*. Enviar $300.000 a 300 999 0000 → **En revisión**. En la consola, el caso arriba: puntaje 1,00 (dispositivo nuevo, Tor, SIM, destino nuevo) y sus razones en orden. |
 | 2:15–2:45 | «La plata no salió. El analista ve por qué, y cómo contactar a Laura: ella pidió videollamada con intérprete de lengua de señas.» | Abrir el caso (etiqueta «Contacto accesible») → *Confirmar fraude* → confirmar. En la billetera: **Bloqueada por fraude** en menos de 4 s. |
 | 2:45–3:05 | «Si es el cliente legítimo con un SIM nuevo, no lo bloqueamos: le pedimos un código, que además se puede escuchar.» | *Seguridad → SIM swapping*. Enviar a Andrés → **código** → *Escuchar código* → escribirlo. |
@@ -45,7 +45,8 @@ Dos pantallas lado a lado: a la izquierda la **billetera** (celular o ventana an
   HMAC. Ninguna regla usa edad, región ni ingresos.
 - **¿Qué fraude se les escapa?** El engaño con QR casi no deja señales técnicas; lo decimos en el reporte.
 - **¿Cómo apoya a personas con discapacidad?** La billetera tiene texto grande, alto contraste, lectura fácil,
-  lectura en voz alta y funciona con lector de pantalla y teclado. El cliente elige cómo lo contactan (incluida
+  lectura en voz alta y funciona con lector de pantalla y teclado. La consola tiene su propio menú de accesibilidad
+  para el analista (texto grande, alto contraste, sin animaciones, casos nuevos leídos en voz alta). El cliente elige cómo lo contactan (incluida
   lengua de señas) y aegix se lo muestra al analista sin usarlo para decidir; hay una prueba que lo garantiza.
 - **¿Escala?** Más de 1.100 operaciones por segundo en un portátil; el pico exigido es 150.
 

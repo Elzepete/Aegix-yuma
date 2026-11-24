@@ -73,7 +73,7 @@ func (a *Avisador) enviar(m mensaje) {
 }
 
 var titulos = map[string][3]string{ // título, etiqueta de ntfy, prioridad
-	"aprobar":  {"Yuma · Operación aprobada", "white_check_mark", "3"},
+	"aprobar":  {"Yuma · aegix aprobó la operación", "white_check_mark", "3"},
 	"desafiar": {"Yuma · Te pedimos un código", "warning", "4"},
 	"retener":  {"Yuma · Operación en revisión", "rotating_light", "5"},
 	"rechazar": {"Yuma · Operación rechazada", "no_entry", "4"},

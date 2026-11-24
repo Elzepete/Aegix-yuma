@@ -99,6 +99,9 @@ aegix no castiga a quien usa la billetera de otra manera.
   `TestAccesibilidadNoCambiaLaDecisionYLlegaAlAnalista`: mismas señales con y sin preferencias, mismo puntaje y
   misma decisión en los tres niveles de riesgo.
 - **El analista las ve antes de actuar.** El caso muestra «Contacto accesible» y, en el detalle, cómo comunicarse.
+  La consola filtra esos casos y los cuenta en «Revisión de analistas».
+- **La consola también es accesible para quien la opera**: menú Accesibilidad con texto grande, alto contraste,
+  sin animaciones y lectura en voz alta de cada caso nuevo; funciona con teclado y lector de pantalla.
 - **La verificación no excluye.** Un desafío pide un código que dura 10 minutos y siempre se puede pedir otro (el
   límite es de seguridad y se puede extender, como pide WCAG 2.2.1); en pantalla se puede escuchar en voz alta, y en
   el celular llega como notificación que el lector de pantalla del teléfono lee. Quien opera con el celular de su persona de apoyo recibe un código, no un bloqueo (dispositivo nuevo solo

@@ -21,7 +21,10 @@ flowchart TD
   H -->|menos de 0,35| AP["Aprobar"]
   H -->|0,35 a 0,65| DE["Desafiar"]
   H -->|0,65 o más con señal ajena al origen| RE["Retener"]
-  AP --> AP1["La plata sale: ¡Listo!"]
+  AP --> TR{"¿Es una transferencia?"}
+  TR -->|No| AP1["La plata sale: ¡Listo!"]
+  TR -->|Sí| CF["Confirmar la transferencia con un código atado al monto y al destino"]
+  CF --> DE2
   DE --> DE1["Código al celular: vale 10 minutos, se puede pedir otro y escuchar"]
   DE1 --> DE2{"¿Código correcto?"}
   DE2 -->|Sí| AP1

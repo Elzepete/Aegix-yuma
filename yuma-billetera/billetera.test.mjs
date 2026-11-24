@@ -127,6 +127,10 @@ test('códigos: la ficha firmada valida el código correcto, rechaza otro y venc
   assert.equal(comprobar(ficha, codigo, '3000000001', 'operacion', 2000), 'incorrecto', 'otro motivo');
   assert.equal(comprobar(ficha, codigo, '3000000001', 'ingreso', 1000 + VIGENCIA_MS + 1), 'vencido');
   assert.equal(comprobar('basura', '123456', '3000000001', 'ingreso'), 'incorrecto');
+  const envio = emitir('3000000001', 'operacion', 1000, '50000|3000000002');
+  assert.equal(comprobar(envio.ficha, envio.codigo, '3000000001', 'operacion', 2000, '50000|3000000002'), 'valido');
+  assert.equal(comprobar(envio.ficha, envio.codigo, '3000000001', 'operacion', 2000, '900000|3000000002'), 'incorrecto', 'otro monto');
+  assert.equal(comprobar(envio.ficha, envio.codigo, '3000000001', 'operacion', 2000, '50000|3009990000'), 'incorrecto', 'otro destino');
 });
 
 test('códigos: con NTFY_URL el código va al celular y no vuelve a la pantalla', async () => {
@@ -142,13 +146,13 @@ test('códigos: con NTFY_URL el código va al celular y no vuelve a la pantalla'
   globalThis.fetch = async (url, init) => { enviados.push({ url, cuerpo: init.body }); return new Response('{}'); };
   process.env.NTFY_URL = 'https://ntfy.sh/tema-de-prueba';
   try {
-    const r = await pedir({ accion: 'enviar', celular: '3000000001', motivo: 'operacion', monto: 50000 });
+    const r = await pedir({ accion: 'enviar', celular: '3000000001', motivo: 'operacion', monto: 50000, destino: '3000000002' });
     assert.equal(r.canal, 'celular');
     assert.equal(r.codigo, undefined, 'el código no vuelve a la pantalla');
     assert.equal(enviados[0].url, 'https://ntfy.sh/');
     const aviso = JSON.parse(enviados[0].cuerpo);
     assert.equal(aviso.topic, 'tema-de-prueba');
-    assert.match(aviso.message, /autorizar \$\s?50\.000 es \d{6}/);
+    assert.match(aviso.message, /autorizar \$\s?50\.000 a •••0002 es \d{6}/);
   } finally {
     globalThis.fetch = original;
     delete process.env.NTFY_URL;

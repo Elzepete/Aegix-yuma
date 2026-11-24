@@ -257,12 +257,13 @@ export function Mezcla({ porOrigen }: { porOrigen?: Record<string, Record<string
   );
 }
 
-export function Revision({ ind, pendientes }: { ind?: Indicadores; pendientes: number }) {
+export function Revision({ ind, pendientes, accesibles }: { ind?: Indicadores; pendientes: number; accesibles: number }) {
   return (
     <section className="panel" aria-labelledby="t-revision">
       <h3 id="t-revision">Revisión de analistas</h3>
       <dl className="revision">
         <div><dt>Por resolver</dt><dd className="mono">{entero.format(pendientes)}</dd></div>
+        <div><dt>Con contacto accesible</dt><dd className="mono" style={{ color: 'var(--yuma)' }}>{entero.format(accesibles)}</dd></div>
         <div><dt>Liberadas</dt><dd className="mono" style={{ color: 'var(--ok)' }}>{entero.format(ind?.liberadas_por_analista ?? 0)}</dd></div>
         <div><dt>Fraudes confirmados</dt><dd className="mono" style={{ color: 'var(--rechazo)' }}>{entero.format(ind?.fraudes_confirmados ?? 0)}</dd></div>
       </dl>

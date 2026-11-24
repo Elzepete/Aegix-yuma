@@ -66,7 +66,7 @@ const ICONO_OP = { enviar_yuma: 'enviar', enviar_banco: 'banco', pagar_qr: 'qr',
 
 const ETIQUETA = {
   completada: 'Completada', verificada: 'Verificada', retenida: 'En revisión', rechazada: 'Rechazada',
-  cancelada: 'Cancelada', error: 'No autorizada', desafio: 'Esperando código',
+  cancelada: 'Cancelada', error: 'No autorizada', desafio: 'Esperando código', confirmacion: 'Esperando código',
   liberada: 'Aprobada por analista', bloqueada: 'Bloqueada por fraude',
 };
 
@@ -81,13 +81,16 @@ const CLAVE = 'yuma.billetera.v2';
 function inicial() {
   return {
     version: 2,
-    usuarios: Object.fromEntries(CLIENTES.map((c) => [c.celular, { ...structuredClone(c), movimientos: [], senales: {}, preferencias: { contacto: '', apoyo: false } }])),
+    usuarios: Object.fromEntries(CLIENTES.map((c) => [c.celular, { ...structuredClone(c), movimientos: [], senales: {}, preferencias: { contacto: '', apoyo: false, confirmar: true } }])),
     dispositivo: `D${azar(4)}`,
     sesion: null,
     ocultarSaldo: false,
     accesibilidad: { ...SIN_AJUSTES },
   };
 }
+// Estados que esperan un código: el desafío de aegix y la confirmación de una transferencia.
+const CON_CODIGO = ['desafio', 'confirmacion'];
+const esTransferencia = (clave) => clave === 'enviar_yuma' || clave === 'enviar_banco';
 // Ajustes de este dispositivo; las preferencias de contacto son de cada cliente (usuario.preferencias).
 const SIN_AJUSTES = { texto: false, contraste: false, facil: false, voz: false };
 function cargar() {
@@ -95,9 +98,9 @@ function cargar() {
     const e = JSON.parse(localStorage.getItem(CLAVE));
     if (e?.version === 2) {
       // Un desafío sin resolver al recargar la página se da por cancelado.
-      Object.values(e.usuarios).forEach((u) => u.movimientos.forEach((m) => { if (m.estado === 'desafio') m.estado = 'cancelada'; }));
+      Object.values(e.usuarios).forEach((u) => u.movimientos.forEach((m) => { if (CON_CODIGO.includes(m.estado)) m.estado = 'cancelada'; }));
       e.accesibilidad = { ...SIN_AJUSTES, ...e.accesibilidad };
-      Object.values(e.usuarios).forEach((u) => { u.preferencias ??= { contacto: '', apoyo: false }; });
+      Object.values(e.usuarios).forEach((u) => { u.preferencias = { contacto: '', apoyo: false, confirmar: true, ...u.preferencias }; });
       return e;
     }
   } catch { /* almacenamiento bloqueado o dañado: se empieza de cero */ }
@@ -132,13 +135,32 @@ const facil = (normal, sencillo) => (ajustes().facil ? sencillo : normal);
 const invalido = (campo) => `aria-describedby="error"${vista.error && vista.campo === campo ? ' aria-invalid="true"' : ''}`;
 const mensajeError = () => `<p class="error" id="error" ${vista.error ? 'role="alert"' : ''}>${esc(vista.error ?? '')}</p>`;
 
+// Voces del sistema. En Linux el navegador las toma de speech-dispatcher: sin él, la lista llega vacía.
+let voces = [];
+const cargarVoces = () => { voces = 'speechSynthesis' in window ? speechSynthesis.getVoices() : []; };
+if ('speechSynthesis' in window) {
+  cargarVoces();
+  speechSynthesis.addEventListener('voiceschanged', () => { cargarVoces(); if (vista.nombre === 'accesibilidad') pintar(); });
+}
+const vozEspanol = () => voces.find((v) => /^es[-_]CO/i.test(v.lang)) || voces.find((v) => /^es\b/i.test(v.lang)) || voces.find((v) => /spanish|español/i.test(v.name));
+const SIN_VOZ = 'Este navegador no tiene voces instaladas. En Linux instala speech-dispatcher y espeak-ng y reinicia el navegador; en el celular funciona sin instalar nada.';
+
 function hablar(texto) {
-  if (!('speechSynthesis' in window)) return;
+  if (!('speechSynthesis' in window) || !voces.length) return avisar(SIN_VOZ, false);
   speechSynthesis.cancel();
   const voz = new SpeechSynthesisUtterance(texto);
-  voz.lang = 'es-CO';
+  const es = vozEspanol();
+  if (es) voz.voice = es;
+  voz.lang = es?.lang || 'es-CO';
   voz.rate = 0.9;
+  voz.onerror = (e) => { if (!['interrupted', 'canceled'].includes(e.error)) avisar(SIN_VOZ, false); };
   speechSynthesis.speak(voz);
+}
+function estadoVoz() {
+  if (!('speechSynthesis' in window)) return 'Este navegador no puede leer en voz alta.';
+  if (!voces.length) return SIN_VOZ;
+  const es = vozEspanol();
+  return es ? `Voz: ${es.name}.` : `No hay voz en español; se usará ${voces[0].name}.`;
 }
 const digitos = (codigo) => codigo.split('').join(', ');
 
@@ -302,6 +324,7 @@ const TEXTO_RESULTADO = {
   completada: ['ok', '¡Listo! Plata enviada', 'aegix aprobó la operación sin pasos extra.'],
   verificada: ['ok', 'Verificada y enviada', 'Confirmaste tu identidad con el código.'],
   desafio: ['candado', 'Confirma que eres tú', 'aegix pide una verificación adicional antes de enviar.'],
+  confirmacion: ['candado', 'Confirma la transferencia', 'aegix aprobó la operación. Escribe el código que te enviamos para terminar el envío.'],
   retenida: ['reloj', 'Operación en revisión', 'La plata no salió. Un analista la revisará y te avisaremos aquí mismo.'],
   liberada: ['ok', 'Un analista aprobó tu envío', 'Revisamos la operación y la plata ya salió.'],
   bloqueada: ['x', 'Operación bloqueada', 'Un analista confirmó que no era segura y la plata no salió. Si no la hiciste tú, cambia tu clave.'],
@@ -314,6 +337,7 @@ const TEXTO_FACIL = {
   completada: 'Tu plata ya salió.',
   verificada: 'Escribiste bien el código. Tu plata ya salió.',
   desafio: 'Antes de enviar, escribe el código que te mandamos.',
+  confirmacion: 'Para terminar el envío, escribe el código que te mandamos.',
   retenida: 'Tu plata no salió todavía. Una persona de Yuma va a revisar el envío. Te avisamos aquí.',
   liberada: 'Una persona revisó tu envío. Tu plata ya salió.',
   bloqueada: 'Una persona revisó tu envío y lo frenó para protegerte. Tu plata sigue en tu cuenta. Si no fuiste tú, cambia tu clave.',
@@ -340,9 +364,9 @@ function vResultado() {
       <p>${texto}</p>
       <button class="enlace" data-accion="escuchar">${icono('altavoz', 'width="18" height="18"')}Escuchar</button>
     </section>
-    ${m.estado === 'desafio' ? formCodigo('codigo', m.canal, 'Confirmar', '<button class="boton boton-sec" type="button" data-accion="cancelar-desafio">Cancelar operación</button>') : ''}
+    ${CON_CODIGO.includes(m.estado) ? formCodigo('codigo', m.canal, m.estado === 'confirmacion' ? 'Enviar la plata' : 'Confirmar', '<button class="boton boton-sec" type="button" data-accion="cancelar-desafio">Cancelar operación</button>') : ''}
     ${vDecision(m)}
-    ${m.estado !== 'desafio' ? '<button class="boton" data-accion="ir" data-vista="inicio">Volver al inicio</button>' : ''}`;
+    ${!CON_CODIGO.includes(m.estado) ? '<button class="boton" data-accion="ir" data-vista="inicio">Volver al inicio</button>' : ''}`;
 }
 
 // Formulario del código de 6 dígitos (ingreso en dos pasos y desafíos de aegix).
@@ -386,6 +410,9 @@ function vSeguridad() {
           <input type="checkbox" role="switch" data-senal="${s.clave}" ${usuario().senales[s.clave] ? 'checked' : ''}>
         </label>`).join('')}
     </div>
+    <div class="tarjeta">
+      ${interruptor('data-preferencia', 'confirmar', 'Confirmar cada transferencia con un código', 'Segundo factor: aunque aegix apruebe, el envío sale solo con el código que llega a tu celular.', usuario().preferencias.confirmar)}
+    </div>
     <p class="suave pequeno">Huella de este dispositivo: ${esc(estado.dispositivo)}</p>
     <div class="pila">
       <button class="boton boton-sec" data-accion="salir">Cerrar sesión</button>
@@ -412,6 +439,8 @@ function vAccesibilidad() {
       ${interruptor('data-ajuste', 'contraste', 'Alto contraste', 'Colores más oscuros y bordes más marcados.', a.contraste)}
       ${interruptor('data-ajuste', 'facil', 'Lectura fácil', 'Frases cortas y sin palabras técnicas para explicar cada decisión.', a.facil)}
       ${interruptor('data-ajuste', 'voz', 'Leer en voz alta', 'Lee el resultado de cada operación y el código de verificación.', a.voz)}
+      <p class="suave pequeno" id="estado-voz">${esc(estadoVoz())}</p>
+      <button class="enlace" type="button" data-accion="probar-voz">${icono('altavoz', 'width="18" height="18"')}Probar la voz</button>
     </div>
     ${u ? `<div class="tarjeta">
       <h2>Si una persona revisa tu operación</h2>
@@ -490,41 +519,46 @@ async function autorizar(op) {
     decision: valida ? respuesta : null,
     motivo: valida ? '' : respuesta.error || 'respuesta inesperada',
   };
+  // Segundo factor en transferencias: aunque aegix apruebe, la plata sale solo con el código del celular.
+  if (m.estado === 'completada' && esTransferencia(op.clave) && u.preferencias.confirmar) m.estado = 'confirmacion';
   if (m.estado === 'completada') u.saldo -= m.monto;
   let envio = null;
-  if (m.estado === 'desafio') {
-    envio = await pedirCodigo(u.celular, 'operacion', m.monto);
+  if (CON_CODIGO.includes(m.estado)) {
+    envio = await pedirCodigo(u.celular, 'operacion', m.monto, m.destino);
     if (envio) Object.assign(m, { ficha: envio.ficha, canal: envio.canal, codigo: envio.codigo, intentos: 0 });
     else Object.assign(m, { estado: 'error', motivo: 'No pudimos enviar el código de verificación' });
   }
   u.movimientos.unshift(m);
   guardar();
   ir('resultado', { id });
-  if (envio) anunciarCodigo(envio, `autorizar ${cop.format(m.monto)}`);
+  if (envio) anunciarCodigo(envio, paraOperacion(m));
   if (ajustes().voz) leerResultado(m);
 }
 
 // Pide un código al servidor: llega al celular (ntfy) o, sin celular configurado, vuelve como SMS simulado.
-async function pedirCodigo(celular, motivo, monto) {
+async function pedirCodigo(celular, motivo, monto, destino) {
   try {
     const r = await fetch('/api/codigo', {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ accion: 'enviar', celular, motivo, monto }),
+      body: JSON.stringify({ accion: 'enviar', celular, motivo, monto, destino }),
     });
     const d = await r.json();
     return r.ok && d.ficha ? d : null;
   } catch { return null; }
 }
 
-async function verificarCodigo(ficha, codigo, celular, motivo) {
+async function verificarCodigo(ficha, codigo, celular, motivo, monto, destino) {
   try {
     const r = await fetch('/api/codigo', {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ accion: 'verificar', ficha, codigo, celular, motivo }),
+      body: JSON.stringify({ accion: 'verificar', ficha, codigo, celular, motivo, monto, destino }),
     });
     return (await r.json()).resultado ?? 'sin_conexion';
   } catch { return 'sin_conexion'; }
 }
+
+// Qué autoriza el código: monto y los últimos 4 caracteres del destino, como en el mensaje del celular.
+const paraOperacion = (m) => `autorizar ${cop.format(m.monto)} a •••${m.destino.slice(-4)}`;
 
 function anunciarCodigo(envio, para) {
   if (envio.canal === 'simulado') return mostrarCodigo(envio.codigo, para);
@@ -535,7 +569,7 @@ const ERROR_CODIGO = { vencido: 'El código venció. Pide otro con «Enviar otro
 
 function leerResultado(m) {
   const [, titulo, texto] = textoResultado(m);
-  hablar(`${titulo}. ${texto}${m.estado === 'desafio' && m.codigo ? ` Tu código es ${digitos(m.codigo)}.` : ''}`);
+  hablar(`${titulo}. ${texto}${CON_CODIGO.includes(m.estado) && m.codigo ? ` Tu código es ${digitos(m.codigo)}.` : ''}`);
 }
 
 // El código no desaparece solo (WCAG 2.2.1): se cierra con el botón o al terminar la verificación.
@@ -580,6 +614,7 @@ app.addEventListener('click', (ev) => {
     case 'elegir': ir('ingreso', { celular: d.celular }); return app.querySelector('#clave')?.focus();
     case 'escuchar': return leerResultado(usuario().movimientos.find((x) => x.id === vista.id));
     case 'otro-codigo': return otroCodigo();
+    case 'probar-voz': return hablar('Hola, soy Yuma. Así se escucharán los resultados de tus operaciones.');
     case 'ir': return ir(d.vista);
     case 'operar': return ir('operacion', { op: d.op, ...borrador });
     case 'destino': return ir('operacion', { ...vista, ...borrador, destino: d.id, error: '' });
@@ -661,8 +696,8 @@ async function confirmarDesafio(codigo) {
   if (verificando) return;
   const m = usuario().movimientos.find((x) => x.id === vista.id);
   verificando = true;
-  const resultado = await verificarCodigo(m.ficha, codigo, usuario().celular, 'operacion').finally(() => { verificando = false; });
-  if (m.estado !== 'desafio') return;
+  const resultado = await verificarCodigo(m.ficha, codigo, usuario().celular, 'operacion', m.monto, m.destino).finally(() => { verificando = false; });
+  if (!CON_CODIGO.includes(m.estado)) return;
   if (resultado === 'valido') return cerrarDesafio(m, 'verificada');
   if (resultado !== 'incorrecto') return ir('resultado', { id: m.id, error: ERROR_CODIGO[resultado], campo: 'codigo' });
   m.intentos += 1;
@@ -679,12 +714,12 @@ async function otroCodigo() {
     return anunciarCodigo(envio, 'entrar a Yuma');
   }
   const m = usuario().movimientos.find((x) => x.id === vista.id);
-  const envio = await pedirCodigo(usuario().celular, 'operacion', m.monto);
+  const envio = await pedirCodigo(usuario().celular, 'operacion', m.monto, m.destino);
   if (!envio) return ir('resultado', { id: m.id, error: 'No pudimos enviar otro código. Intenta de nuevo.', campo: 'codigo' });
   Object.assign(m, { ficha: envio.ficha, canal: envio.canal, codigo: envio.codigo });
   guardar();
   ir('resultado', { id: m.id });
-  anunciarCodigo(envio, `autorizar ${cop.format(m.monto)}`);
+  anunciarCodigo(envio, paraOperacion(m));
 }
 
 // Revisa si un analista resolvió alguna retención. revisando evita que dos rondas descuenten dos veces.
@@ -729,12 +764,12 @@ async function revisarRetenidas() {
   }
 }
 
-function avisar(texto) {
+function avisar(texto, leer = true) {
   const sms = document.getElementById('sms');
   sms.innerHTML = `<p><b>Yuma</b> · ${esc(texto)}</p><div class="sms-acciones"><button type="button" data-sms="cerrar">Cerrar</button></div>`;
   delete sms.dataset.codigo;
   sms.hidden = false;
-  if (ajustes().voz) hablar(texto);
+  if (leer && ajustes().voz) hablar(texto);
   // El mismo aviso queda en el movimiento; este recuadro se cierra solo a los 20 s, salvo que tenga el foco.
   clearTimeout(avisar.t);
   avisar.t = setTimeout(() => { if (!sms.contains(document.activeElement)) sms.hidden = true; }, 20000);

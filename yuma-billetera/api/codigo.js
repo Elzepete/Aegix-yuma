@@ -16,13 +16,14 @@ const secreto = () => process.env.CODIGO_SECRETO || process.env.AEGIX_TOKEN || S
 const b64 = (texto) => Buffer.from(texto).toString('base64url');
 const firma = (datos, codigo) => createHmac('sha256', secreto()).update(`${datos}.${codigo}`).digest('base64url');
 
-export function emitir(celular, motivo, ahora = Date.now()) {
+// operacion ata el código a «monto|destino»: un código para enviar $50.000 a un número no sirve para otro envío.
+export function emitir(celular, motivo, ahora = Date.now(), operacion = '') {
   const codigo = String(randomInt(0, 1e6)).padStart(6, '0');
-  const datos = b64(JSON.stringify({ c: celular, m: motivo, e: ahora + VIGENCIA_MS }));
+  const datos = b64(JSON.stringify({ c: celular, m: motivo, o: operacion, e: ahora + VIGENCIA_MS }));
   return { codigo, ficha: `${datos}.${firma(datos, codigo)}` };
 }
 
-export function comprobar(ficha, codigo, celular, motivo, ahora = Date.now()) {
+export function comprobar(ficha, codigo, celular, motivo, ahora = Date.now(), operacion = '') {
   const [datos, recibida] = String(ficha).split('.');
   if (!datos || !recibida || !/^\d{6}$/.test(String(codigo))) return 'incorrecto';
   const esperada = Buffer.from(firma(datos, codigo));
@@ -30,7 +31,7 @@ export function comprobar(ficha, codigo, celular, motivo, ahora = Date.now()) {
   if (esperada.length !== dada.length || !timingSafeEqual(esperada, dada)) return 'incorrecto';
   let d;
   try { d = JSON.parse(Buffer.from(datos, 'base64url').toString()); } catch { return 'incorrecto'; }
-  if (d.c !== celular || d.m !== motivo) return 'incorrecto';
+  if (d.c !== celular || d.m !== motivo || (d.o ?? '') !== operacion) return 'incorrecto';
   return ahora > d.e ? 'vencido' : 'valido';
 }
 
@@ -57,11 +58,15 @@ export async function POST(request) {
   try { e = JSON.parse(await request.text()); } catch { return json({ error: 'JSON inválido' }, 400); }
   if (!e || !/^3\d{9}$/.test(e.celular) || !MOTIVOS[e.motivo]) return json({ error: 'celular o motivo inválido' }, 400);
 
-  if (e.accion === 'verificar') return json({ resultado: comprobar(e.ficha, e.codigo, e.celular, e.motivo) });
+  const montoValido = Number.isInteger(e.monto) && e.monto > 0 && e.monto < 1e11;
+  const destino = typeof e.destino === 'string' && /^[A-Z0-9]{4,20}$/.test(e.destino) ? e.destino : '';
+  const operacion = e.motivo === 'operacion' ? `${montoValido ? e.monto : ''}|${destino}` : '';
+  if (e.accion === 'verificar') return json({ resultado: comprobar(e.ficha, e.codigo, e.celular, e.motivo, Date.now(), operacion) });
   if (e.accion !== 'enviar') return json({ error: 'acción desconocida' }, 400);
 
-  const monto = Number.isInteger(e.monto) && e.monto > 0 && e.monto < 1e11 ? ` ${pesos.format(e.monto)}` : '';
-  const { codigo, ficha } = emitir(e.celular, e.motivo);
+  // El mensaje dice qué se autoriza: monto y los últimos 4 caracteres del destino.
+  const monto = (montoValido ? ` ${pesos.format(e.monto)}` : '') + (destino ? ` a •••${destino.slice(-4)}` : '');
+  const { codigo, ficha } = emitir(e.celular, e.motivo, Date.now(), operacion);
   const tema = temaNtfy(process.env.NTFY_URL);
   if (!tema) return json({ ficha, canal: 'simulado', codigo });
   try {

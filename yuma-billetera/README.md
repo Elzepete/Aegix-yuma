@@ -16,9 +16,14 @@ que guarda la URL y la clave de aegix fuera del navegador y añade la IP y el pa
 Saldos y movimientos viven en el `localStorage` del navegador (es una demo).
 
 **Verificación en dos pasos.** Después de la clave, la billetera pide un código de 6 dígitos; también cuando aegix
-decide *desafiar*. Lo emite y verifica `api/codigo.js` sin base de datos (ficha firmada con HMAC, vence a los
+decide *desafiar* y en **cada transferencia** (aunque aegix apruebe, la plata sale solo con el código; se desactiva
+en Seguridad). El código de una operación queda atado a su monto y su destino. Lo emite y verifica `api/codigo.js` sin base de datos (ficha firmada con HMAC, vence a los
 10 minutos, se puede pedir otro). Con `NTFY_URL=https://ntfy.sh/<tema>` llega al celular por la app ntfy, gratis y
 sin cuenta; sin ella aparece en pantalla como «SMS simulado».
+
+**Voz en Linux.** El navegador lee en voz alta con speech-dispatcher; si no está instalado, la billetera lo dice
+(«Probar la voz» en Accesibilidad). En Arch o CachyOS: `sudo pacman -S speech-dispatcher espeak-ng` y reinicia el
+navegador. En el celular funciona sin instalar nada.
 
 **Accesibilidad** (pestaña propia, también desde la pantalla de ingreso): texto más grande, alto contraste, lectura
 fácil de cada decisión, lectura en voz alta del resultado y del código, y cómo prefiere el cliente que lo contacten

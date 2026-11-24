@@ -163,7 +163,7 @@ h3 { font-size: 0.9375rem; font-weight: 700; }
 .vacio { text-align: center; padding: 28px 12px; color: var(--suave); }
 
 .estado-completada, .estado-verificada, .estado-liberada { color: var(--ok); }
-.estado-retenida, .estado-desafio { color: var(--alerta); }
+.estado-retenida, .estado-desafio, .estado-confirmacion { color: var(--alerta); }
 .estado-rechazada, .estado-error, .estado-cancelada, .estado-bloqueada { color: var(--peligro); }
 .tachado { text-decoration: line-through; color: var(--suave); }
 
@@ -187,7 +187,7 @@ h3 { font-size: 0.9375rem; font-weight: 700; }
 .sello { width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; margin: 0 auto 16px; }
 .sello svg { width: 38px; height: 38px; }
 .sello.completada, .sello.verificada, .sello.liberada { background: var(--ok-claro); color: var(--ok); }
-.sello.retenida, .sello.desafio { background: var(--alerta-claro); color: var(--alerta); }
+.sello.retenida, .sello.desafio, .sello.confirmacion { background: var(--alerta-claro); color: var(--alerta); }
 .sello.rechazada, .sello.error, .sello.cancelada, .sello.bloqueada { background: var(--peligro-claro); color: var(--peligro); }
 .resultado-monto { font-family: var(--titulo); font-size: 2.125rem; font-weight: 800; margin: 8px 0 2px; }
 
