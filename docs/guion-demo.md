@@ -8,11 +8,12 @@ Dos pantallas lado a lado: a la izquierda la **billetera** (celular o ventana an
 
 ## Antes de presentar (30 minutos antes)
 
-1. `herramientas/iniciar.sh --tunel --demo-limpia` con `YUMA_PANEL_TOKEN`, `YUMA_PANEL_CLAVE` y `NGROK_DOMINIO`
+1. `herramientas/iniciar.sh --tunel --demo-limpia` con `YUMA_PANEL_TOKEN`, `YUMA_PANEL_CLAVE`, `NGROK_DOMINIO` y `NTFY_URL`
    definidas (ver [despliegue.md](despliegue.md)). La auditoría anterior queda archivada, no se borra.
 2. `curl https://<dominio>/salud` → `{"estado":"ok"}` y `curl https://<proyecto>.vercel.app/api/autorizar` →
    `"en_linea"`.
-3. En la billetera: *Seguridad → Restablecer la demo*. Ingresa como Laura (300 000 0001, clave 1111) y en
+3. El celular con la app ntfy suscrita al tema, con sonido. En la billetera: *Seguridad → Restablecer la demo*.
+   Ingresa como Laura (300 000 0001, clave 1111 y el código que llega al celular) y en
    *Accesibilidad* elige «Videollamada con intérprete de lengua de señas».
 4. Abre la consola, escribe la contraseña y deja visible «Toda la actividad». La cabecera debe decir «Actualizado ahora».
 5. Ten abierto [arquitectura.html](arquitectura.html) en otra pestaña, en la sección 1.
@@ -24,7 +25,7 @@ Dos pantallas lado a lado: a la izquierda la **billetera** (celular o ventana an
 | --- | --- | --- |
 | 0:00–0:30 | «Hoy Yuma Pay detecta el fraude 15 minutos después de que la plata salió, y 89 de cada 100 alertas son falsas. aegix decide *antes* de que salga un peso.» | Pantalla de inicio de la billetera. |
 | 0:30–1:00 | «La billetera pide permiso a aegix antes de cada operación. aegix decide en 3 milisegundos y el analista lo ve en vivo.» | Diagrama, sección 1: cliente → Vercel → túnel → consola → aegix. |
-| 1:00–1:30 | «Laura le paga a su contacto de siempre.» | Enviar $50.000 a Andrés → **¡Listo!** En la consola aparece «aprobar» en menos de 2 s. |
+| 1:00–1:30 | «Laura entra con su clave y un código que le llega al celular. Le paga a su contacto de siempre.» | Mostrar la notificación de ntfy. Enviar $50.000 a Andrés → **¡Listo!** «aprobar» en la consola en menos de 2 s y el aviso en el celular. |
 | 1:30–2:15 | «Ahora alguien le robó la cuenta: cambió la SIM, entra por Tor desde un celular nuevo y manda la plata a un número que Laura nunca usó.» | *Seguridad → Toma de cuenta*. Enviar $300.000 a 300 999 0000 → **En revisión**. En la consola, el caso arriba: puntaje 1,00 (dispositivo nuevo, Tor, SIM, destino nuevo) y sus razones en orden. |
 | 2:15–2:45 | «La plata no salió. El analista ve por qué, y cómo contactar a Laura: ella pidió videollamada con intérprete de lengua de señas.» | Abrir el caso (etiqueta «Contacto accesible») → *Confirmar fraude* → confirmar. En la billetera: **Bloqueada por fraude** en menos de 4 s. |
 | 2:45–3:05 | «Si es el cliente legítimo con un SIM nuevo, no lo bloqueamos: le pedimos un código, que además se puede escuchar.» | *Seguridad → SIM swapping*. Enviar a Andrés → **código** → *Escuchar código* → escribirlo. |

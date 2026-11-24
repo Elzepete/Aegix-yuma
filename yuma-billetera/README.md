@@ -15,10 +15,15 @@ Sin dependencias ni paso de compilación: HTML + CSS + JS y una función de Verc
 que guarda la URL y la clave de aegix fuera del navegador y añade la IP y el país reales de la conexión.
 Saldos y movimientos viven en el `localStorage` del navegador (es una demo).
 
+**Verificación en dos pasos.** Después de la clave, la billetera pide un código de 6 dígitos; también cuando aegix
+decide *desafiar*. Lo emite y verifica `api/codigo.js` sin base de datos (ficha firmada con HMAC, vence a los
+10 minutos, se puede pedir otro). Con `NTFY_URL=https://ntfy.sh/<tema>` llega al celular por la app ntfy, gratis y
+sin cuenta; sin ella aparece en pantalla como «SMS simulado».
+
 **Accesibilidad** (pestaña propia, también desde la pantalla de ingreso): texto más grande, alto contraste, lectura
 fácil de cada decisión, lectura en voz alta del resultado y del código, y cómo prefiere el cliente que lo contacten
 si un analista revisa su operación (incluida videollamada con intérprete de lengua de señas). El código de
-verificación no vence. Funciona con lector de pantalla y teclado: el foco sigue a cada pantalla y los errores se
+verificación dura 10 minutos y siempre se puede pedir otro. Funciona con lector de pantalla y teclado: el foco sigue a cada pantalla y los errores se
 anuncian junto a su campo. Las preferencias de contacto viajan a aegix, que las muestra al analista y no las usa
 para decidir.
 

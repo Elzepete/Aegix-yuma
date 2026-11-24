@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"escudo-yuma/internal/avisos"
 	"escudo-yuma/internal/contexto"
 	"escudo-yuma/internal/defensas"
 	"escudo-yuma/internal/registro"
@@ -33,6 +34,7 @@ type Config struct {
 	Motor        *reglas.Motor
 	Registro     *registro.Registro
 	ClavePanel   string
+	Avisos       *avisos.Avisador // opcional: avisos al celular de lo que pasa con la billetera
 }
 
 const tiempoEvaluacion = 250 * time.Millisecond
@@ -127,6 +129,7 @@ func Nuevo(cliente *sandbox.Cliente, cfg Config) http.Handler {
 			case err != nil:
 				responder(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 			default:
+				cfg.Avisos.Resolucion(cuerpo.Resolucion)
 				responder(w, http.StatusOK, map[string]string{"estado": cfg.Registro.Estado(ref)})
 			}
 		})
@@ -237,6 +240,9 @@ func Nuevo(cliente *sandbox.Cliente, cfg Config) http.Handler {
 				Accesibilidad: entrada.Contexto.Accesibilidad,
 			}, confirmada)
 			colector.RegistrarTransaccion(origen, decision.Accion, t.MontoCOP, salida.LatenciaMS, decision.Razones, confirmada)
+			if origen == "billetera" {
+				cfg.Avisos.Decision(decision.Accion, t.TipoOperacion, t.MontoCOP, decision.Razones)
+			}
 			if reportar && !confirmada {
 				colector.RegistrarContingencia("sandbox_sin_confirmar")
 				responder(w, http.StatusBadGateway, map[string]string{"error": "el sandbox no confirmó la decisión"})

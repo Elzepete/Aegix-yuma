@@ -115,3 +115,49 @@ test('lectura fácil: cada razón de reglas.yaml tiene su versión sencilla', ()
   }
   assert.equal(razonFacil('algo nuevo'), 'algo nuevo', 'una razón desconocida se muestra tal cual');
 });
+
+test('códigos: la ficha firmada valida el código correcto, rechaza otro y vence a los 10 minutos', async () => {
+  const { emitir, comprobar, VIGENCIA_MS } = await import('./api/codigo.js');
+  const { codigo, ficha } = emitir('3000000001', 'ingreso', 1000);
+  assert.match(codigo, /^\d{6}$/);
+  assert.ok(!ficha.includes(codigo), 'la ficha no lleva el código');
+  assert.equal(comprobar(ficha, codigo, '3000000001', 'ingreso', 2000), 'valido');
+  assert.equal(comprobar(ficha, codigo === '000000' ? '111111' : '000000', '3000000001', 'ingreso', 2000), 'incorrecto');
+  assert.equal(comprobar(ficha, codigo, '3000000002', 'ingreso', 2000), 'incorrecto', 'otro celular');
+  assert.equal(comprobar(ficha, codigo, '3000000001', 'operacion', 2000), 'incorrecto', 'otro motivo');
+  assert.equal(comprobar(ficha, codigo, '3000000001', 'ingreso', 1000 + VIGENCIA_MS + 1), 'vencido');
+  assert.equal(comprobar('basura', '123456', '3000000001', 'ingreso'), 'incorrecto');
+});
+
+test('códigos: con NTFY_URL el código va al celular y no vuelve a la pantalla', async () => {
+  const { POST } = await import('./api/codigo.js');
+  const pedir = (cuerpo) => POST(new Request('http://x/api/codigo', { method: 'POST', body: JSON.stringify(cuerpo) })).then((r) => r.json());
+  delete process.env.NTFY_URL;
+  const simulado = await pedir({ accion: 'enviar', celular: '3000000001', motivo: 'ingreso' });
+  assert.equal(simulado.canal, 'simulado');
+  assert.equal((await pedir({ accion: 'verificar', celular: '3000000001', motivo: 'ingreso', ficha: simulado.ficha, codigo: simulado.codigo })).resultado, 'valido');
+
+  const original = globalThis.fetch;
+  const enviados = [];
+  globalThis.fetch = async (url, init) => { enviados.push({ url, cuerpo: init.body }); return new Response('{}'); };
+  process.env.NTFY_URL = 'https://ntfy.sh/tema-de-prueba';
+  try {
+    const r = await pedir({ accion: 'enviar', celular: '3000000001', motivo: 'operacion', monto: 50000 });
+    assert.equal(r.canal, 'celular');
+    assert.equal(r.codigo, undefined, 'el código no vuelve a la pantalla');
+    assert.equal(enviados[0].url, 'https://ntfy.sh/');
+    const aviso = JSON.parse(enviados[0].cuerpo);
+    assert.equal(aviso.topic, 'tema-de-prueba');
+    assert.match(aviso.message, /autorizar \$\s?50\.000 es \d{6}/);
+  } finally {
+    globalThis.fetch = original;
+    delete process.env.NTFY_URL;
+  }
+  assert.equal((await POST(new Request('http://x', { method: 'POST', body: '{"accion":"enviar","celular":"123","motivo":"ingreso"}' }))).status, 400);
+});
+
+test('ntfy: solo acepta un tema https válido', async () => {
+  const { temaNtfy } = await import('./api/codigo.js');
+  assert.deepEqual(temaNtfy('https://ntfy.sh/yuma-demo_8f3k'), { servidor: 'https://ntfy.sh', nombre: 'yuma-demo_8f3k' });
+  for (const malo of ['', undefined, 'http://ntfy.sh/tema', 'https://ntfy.sh/', 'https://ntfy.sh/a/b', 'no es url']) assert.equal(temaNtfy(malo), null, String(malo));
+});

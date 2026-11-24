@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"escudo-yuma/internal/avisos"
 	"escudo-yuma/internal/contexto"
 	"escudo-yuma/internal/defensas"
 	"escudo-yuma/internal/registro"
@@ -356,5 +357,46 @@ func TestAccesibilidadNoCambiaLaDecisionYLlegaAlAnalista(t *testing.T) {
 	mala.Contexto.Accesibilidad = &contexto.Accesibilidad{Contacto: "paloma_mensajera"}
 	if rec, _ := enviar(t, h, "/v1/autorizar", mala); rec.Code != http.StatusBadRequest {
 		t.Fatalf("un canal de contacto desconocido debe dar 400, dio %d", rec.Code)
+	}
+}
+
+// Solo las operaciones de la billetera (y las resoluciones del analista) llegan al celular.
+func TestAvisosAlCelularSoloDeLaBilletera(t *testing.T) {
+	titulos := make(chan string, 8)
+	ntfy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var m struct {
+			Titulo string `json:"title"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&m)
+		titulos <- m.Titulo
+	}))
+	defer ntfy.Close()
+	av, err := avisos.Nuevo(ntfy.URL + "/demo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	motor, err := reglas.Abrir(context.Background(), "../../config/reglas.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sb := sandboxFalso(t, false, new(atomic.Int64))
+	h := Nuevo(sandbox.Nuevo(sb.URL), Config{
+		Origen: contexto.Simulado{}, Motor: motor, Versiones: map[string]bool{"3.4.1": true},
+		Limites: defensas.Limites{Cliente: 10, IP: 10, Dispositivo: 10}, Avisos: av,
+	})
+	enviar(t, h, "/score", solicitudBase("T-SANDBOX"))
+	enviar(t, h, "/v1/autorizar", solicitudBase("YW-AVISO"))
+	select {
+	case titulo := <-titulos:
+		if titulo != "Yuma · Operación aprobada" {
+			t.Fatalf("primer aviso %q: /score no debía avisar", titulo)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("la operación de la billetera no llegó al celular")
+	}
+	select {
+	case titulo := <-titulos:
+		t.Fatalf("aviso de más: %q", titulo)
+	case <-time.After(150 * time.Millisecond):
 	}
 }

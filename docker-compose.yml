@@ -2,7 +2,7 @@
 #   consola  http://127.0.0.1:4173
 #   billetera http://127.0.0.1:3000
 # Los tres servicios comparten la red de «aegix»: se hablan por 127.0.0.1 y aegix (:8081) no se publica.
-# Variables opcionales: YUMA_PANEL_TOKEN, YUMA_PANEL_CLAVE, YUMA_AUDIT_KEY (ver docs/despliegue.md).
+# Variables opcionales: YUMA_PANEL_TOKEN, YUMA_PANEL_CLAVE, YUMA_AUDIT_KEY, NTFY_URL (ver docs/despliegue.md).
 
 services:
   aegix:
@@ -10,6 +10,7 @@ services:
     environment:
       YUMA_PANEL_TOKEN: ${YUMA_PANEL_TOKEN:-}
       YUMA_AUDIT_KEY: ${YUMA_AUDIT_KEY:-}
+      NTFY_URL: ${NTFY_URL:-}       # avisos al celular (opcional)
     volumes:
       - datos:/app/datos            # auditoría y clave HMAC: sobreviven a docker compose down
     ports:
@@ -39,6 +40,7 @@ services:
     environment:
       AEGIX_URL: http://127.0.0.1:8081
       AEGIX_TOKEN: ${YUMA_PANEL_TOKEN:-}
+      NTFY_URL: ${NTFY_URL:-}       # códigos de verificación al celular (opcional)
       HOST: 0.0.0.0
     network_mode: service:aegix
     depends_on:

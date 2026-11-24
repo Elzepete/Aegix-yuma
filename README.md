@@ -5,6 +5,9 @@
 Intermediario antifraude en Go para Yuma Pay (organización ficticia de la hackatón). Decide antes de autorizar
 cada operación: aprobar, pedir un código, retener para un analista o rechazar, con sus razones.
 
+**Documentación navegable** (diagramas incluidos): https://elzepete.github.io/Aegix-yuma/ una vez activado
+GitHub Pages (*Settings → Pages → main /docs*).
+
 **Resultados** con las 120.972 transacciones del reto: 81,5 % del fraude detectado antes de autorizar (línea base
 62,6 %, después), 17,7 % de falsos positivos (hoy 89 %), p99 de 5,3 ms. Ver [reporte](docs/reporte-indicadores.md).
 
@@ -15,7 +18,7 @@ cada operación: aprobar, pedir un código, retener para un analista o rechazar,
 | [docs/explicabilidad.md](docs/explicabilidad.md) | cómo decide aegix, cada señal y su peso, accesibilidad y no discriminación, límites |
 | [docs/presentacion.html](docs/presentacion.html) · [docs/flujo.md](docs/flujo.md) | diagramas de flujo, cómo ejecutarlo el día de la presentación, lista de verificación y fallas comunes |
 | [docs/guion-demo.md](docs/guion-demo.md) | demo de 5 minutos con tiempos, preguntas probables y plan B |
-| [docs/despliegue.md](docs/despliegue.md) | publicar gratis: Vercel + túnel con dirección fija |
+| [docs/despliegue.md](docs/despliegue.md) | desplegar todo paso a paso: GitHub, GitHub Pages, Vercel, túnel con dirección fija y celular (ntfy) |
 
 | Carpeta | Contenido |
 | --- | --- |

@@ -7,7 +7,9 @@ y qué hacer si algo falla.
 
 ```mermaid
 flowchart TD
-  A(["Cliente pulsa Enviar en la billetera"]) --> B{"¿Destino y monto válidos?"}
+  A0(["Cliente entra con su celular y su clave"]) --> A1["Segundo paso: código de 6 dígitos al celular o SMS simulado"]
+  A1 --> A(["Pulsa Enviar en la billetera"])
+  A --> B{"¿Destino y monto válidos?"}
   B -->|No| B1["Error junto al campo, sin llamar a aegix"]
   B -->|Sí| C["Función de Vercel: agrega IP, país y token"]
   C --> D["Túnel → consola → aegix POST /v1/autorizar"]
@@ -20,7 +22,7 @@ flowchart TD
   H -->|0,35 a 0,65| DE["Desafiar"]
   H -->|0,65 o más con señal ajena al origen| RE["Retener"]
   AP --> AP1["La plata sale: ¡Listo!"]
-  DE --> DE1["Código por SMS: no vence y se puede escuchar"]
+  DE --> DE1["Código al celular: vale 10 minutos, se puede pedir otro y escuchar"]
   DE1 --> DE2{"¿Código correcto?"}
   DE2 -->|Sí| AP1
   DE2 -->|No, tras 3 intentos| X1["Cancelada: no se mueve plata"]

@@ -11,6 +11,7 @@
 #   NGROK_DOMINIO      dominio fijo gratuito de ngrok (p. ej. aegix-demo.ngrok-free.app); o bien
 #   CLOUDFLARE_TUNEL   nombre de un túnel con nombre de Cloudflare (requiere dominio propio).
 #   Sin ninguno de los dos, se usa un túnel rápido de Cloudflare (dirección distinta en cada arranque).
+#   NTFY_URL           opcional: tema de ntfy (https://ntfy.sh/tu-tema) para recibir en el celular los avisos de aegix.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

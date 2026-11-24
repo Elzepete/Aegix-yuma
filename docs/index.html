@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Escudo Yuma · aegix</title>
+<meta name="description" content="Documentación de Escudo Yuma: arquitectura, guía de presentación, resultados y despliegue.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap">
+<style>
+/* Portada de GitHub Pages: misma identidad que arquitectura.html; una columna con las entradas a cada documento. */
+:root {
+  --papel: #F4F5FA; --hoja: #FFFFFF; --tinta: #1A1D38; --suave: #5D6283; --regla: #D8DBE8; --acento: #17704A;
+  --display: 'Archivo', 'Arial Narrow', system-ui, sans-serif; --texto: 'Archivo', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --papel: #11132A; --hoja: #191C36; --tinta: #E6E8F5; --suave: #A3A7C4; --regla: #2D3154; --acento: #4CC48F; color-scheme: dark; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--papel); color: var(--tinta); font: 400 1rem/1.55 var(--texto); }
+.envoltura { max-width: 860px; margin: 0 auto; padding-block: 48px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1 { font-family: var(--display); font-stretch: 72%; font-weight: 760; font-size: clamp(2.3rem, 7vw, 4rem); line-height: 1.02; margin: 0; text-wrap: balance; }
+.entrada { font-size: 1.12rem; color: var(--suave); max-width: 62ch; margin: 14px 0 0; }
+.cifras { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 22px 0 0; padding: 0; list-style: none; color: var(--suave); }
+.cifras b { color: var(--tinta); font-family: var(--display); font-stretch: 80%; font-size: 1.15rem; }
+.docs { list-style: none; padding: 0; margin: 36px 0 0; display: grid; gap: 12px; }
+.docs a { display: grid; gap: 4px; padding: 18px 20px; background: var(--hoja); border: 1px solid var(--regla); border-radius: 14px; color: var(--tinta); text-decoration: none; }
+.docs a:hover { border-color: var(--suave); }
+.docs a:focus-visible { outline: 3px solid var(--tinta); outline-offset: 2px; }
+.docs b { font-family: var(--display); font-stretch: 85%; font-size: 1.2rem; }
+.docs span { color: var(--suave); }
+.principal a { border: 2px solid var(--acento); }
+footer { margin-top: 36px; color: var(--suave); font-size: .9rem; }
+footer a { color: var(--tinta); }
+</style>
+</head>
+<body>
+<main class="envoltura">
+  <h1>Escudo Yuma · aegix</h1>
+  <p class="entrada">Intermediario antifraude para Yuma Pay, una billetera ficticia de la hackatón: decide antes de que salga un peso si una operación se aprueba, pide un código, espera a un analista o se rechaza.</p>
+  <ul class="cifras" aria-label="Resultados con las 120.972 transacciones del reto">
+    <li><b>81,5 %</b> del fraude detectado (línea base 62,6 %)</li>
+    <li><b>17,7 %</b> de falsos positivos (hoy 89 %)</li>
+    <li><b>5,3 ms</b> de latencia p99</li>
+  </ul>
+  <ul class="docs">
+    <li class="principal"><a href="arquitectura.html"><b>Arquitectura</b><span>Dónde corre cada pieza, las nueve etapas de aegix, un envío retenido paso a paso, cómo se calcula el puntaje y el ciclo del analista.</span></a></li>
+    <li class="principal"><a href="presentacion.html"><b>Presentar el proyecto</b><span>Diagramas de flujo, qué comando correr según dónde presentes, lista de verificación y qué hacer si algo falla.</span></a></li>
+    <li><a href="despliegue.md"><b>Despliegue</b><span>Publicar gratis: GitHub, Vercel, túnel con dirección fija y avisos al celular.</span></a></li>
+    <li><a href="reporte-indicadores.md"><b>Reporte de indicadores</b><span>Cifras medidas, validación temporal y escenarios de ataque.</span></a></li>
+    <li><a href="explicabilidad.md"><b>Explicabilidad</b><span>Cómo decide aegix, cada señal con su peso, accesibilidad y límites.</span></a></li>
+    <li><a href="guion-demo.md"><b>Guion de demo</b><span>Cinco minutos con tiempos y preguntas probables.</span></a></li>
+  </ul>
+  <footer>Simulación para hackatón: Yuma Pay es ficticia. Código en <a href="https://github.com/Elzepete/Aegix-yuma">github.com/Elzepete/Aegix-yuma</a>.</footer>
+</main>
+</body>
+</html>

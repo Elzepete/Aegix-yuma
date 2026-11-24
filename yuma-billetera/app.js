@@ -340,18 +340,30 @@ function vResultado() {
       <p>${texto}</p>
       <button class="enlace" data-accion="escuchar">${icono('altavoz', 'width="18" height="18"')}Escuchar</button>
     </section>
-    ${m.estado === 'desafio' ? `
-      <form class="tarjeta" data-form="codigo" novalidate>
-        <label for="codigo"><b>Código de 6 dígitos</b></label>
-        <p class="suave pequeno" id="codigo-ayuda">Te lo enviamos por SMS (simulado, arriba de la pantalla). No vence: tómate tu tiempo.</p>
-        <div class="codigo"><input class="entrada" id="codigo" name="codigo" inputmode="numeric" maxlength="6" autocomplete="one-time-code" ${invalido('codigo').replace('aria-describedby="error"', 'aria-describedby="codigo-ayuda error"')}></div>
-        ${mensajeError()}
-        <button class="enlace" type="button" data-accion="ver-codigo">Ver o escuchar el código otra vez</button>
-        <div class="pila"><button class="boton" type="submit">Confirmar</button>
-        <button class="boton boton-sec" type="button" data-accion="cancelar-desafio">Cancelar operación</button></div>
-      </form>` : ''}
+    ${m.estado === 'desafio' ? formCodigo('codigo', m.canal, 'Confirmar', '<button class="boton boton-sec" type="button" data-accion="cancelar-desafio">Cancelar operación</button>') : ''}
     ${vDecision(m)}
     ${m.estado !== 'desafio' ? '<button class="boton" data-accion="ir" data-vista="inicio">Volver al inicio</button>' : ''}`;
+}
+
+// Formulario del código de 6 dígitos (ingreso en dos pasos y desafíos de aegix).
+function formCodigo(form, canal, boton, extra = '') {
+  return `
+      <form class="tarjeta" data-form="${form}" novalidate>
+        <label for="codigo"><b>Código de 6 dígitos</b></label>
+        <p class="suave pequeno" id="codigo-ayuda">${canal === 'celular' ? 'Te lo enviamos a tu celular.' : 'Te lo enviamos por SMS (simulado, arriba de la pantalla).'} Vale 10 minutos; si se vence, pide otro.</p>
+        <div class="codigo"><input class="entrada" id="codigo" name="codigo" inputmode="numeric" maxlength="6" autocomplete="one-time-code" ${invalido('codigo').replace('aria-describedby="error"', 'aria-describedby="codigo-ayuda error"')}></div>
+        ${mensajeError()}
+        <button class="enlace" type="button" data-accion="otro-codigo">Enviar otro código</button>
+        <div class="pila"><button class="boton" type="submit">${boton}</button>${extra}</div>
+      </form>`;
+}
+
+function vDosPasos() {
+  return `
+    <button class="volver" data-accion="ir" data-vista="ingreso">${icono('atras', 'width="18" height="18"')}Ingreso</button>
+    <h1>Confirma que eres tú</h1>
+    <p class="suave">Verificación en dos pasos: además de tu clave, escribe el código que te enviamos para entrar como ${esc(estado.usuarios[vista.celular].nombre.split(' ')[0])}.</p>
+    ${formCodigo('dos-pasos', vista.canal, 'Entrar')}`;
 }
 
 function vSeguridad() {
@@ -432,7 +444,7 @@ function selectorDe(el) {
 }
 
 function pintar() {
-  const vistas = { ingreso: vIngreso, inicio: vInicio, operacion: vOperacion, autorizando: vAutorizando, resultado: vResultado, seguridad: vSeguridad, accesibilidad: vAccesibilidad };
+  const vistas = { ingreso: vIngreso, 'dos-pasos': vDosPasos, inicio: vInicio, operacion: vOperacion, autorizando: vAutorizando, resultado: vResultado, seguridad: vSeguridad, accesibilidad: vAccesibilidad };
   const conBarra = estado.sesion && ['inicio', 'seguridad', 'accesibilidad'].includes(vista.nombre);
   const foco = selectorDe(document.activeElement);
   app.innerHTML = vistas[vista.nombre]() + (conBarra ? vBarra() : '');
@@ -479,37 +491,68 @@ async function autorizar(op) {
     motivo: valida ? '' : respuesta.error || 'respuesta inesperada',
   };
   if (m.estado === 'completada') u.saldo -= m.monto;
-  if (m.estado === 'desafio') enviarCodigo(m);
+  let envio = null;
+  if (m.estado === 'desafio') {
+    envio = await pedirCodigo(u.celular, 'operacion', m.monto);
+    if (envio) Object.assign(m, { ficha: envio.ficha, canal: envio.canal, codigo: envio.codigo, intentos: 0 });
+    else Object.assign(m, { estado: 'error', motivo: 'No pudimos enviar el código de verificación' });
+  }
   u.movimientos.unshift(m);
   guardar();
   ir('resultado', { id });
+  if (envio) anunciarCodigo(envio, `autorizar ${cop.format(m.monto)}`);
   if (ajustes().voz) leerResultado(m);
 }
 
-function leerResultado(m) {
-  const [, titulo, texto] = textoResultado(m);
-  hablar(`${titulo}. ${texto}${m.estado === 'desafio' ? ` Tu código es ${digitos(m.codigo)}.` : ''}`);
+// Pide un código al servidor: llega al celular (ntfy) o, sin celular configurado, vuelve como SMS simulado.
+async function pedirCodigo(celular, motivo, monto) {
+  try {
+    const r = await fetch('/api/codigo', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ accion: 'enviar', celular, motivo, monto }),
+    });
+    const d = await r.json();
+    return r.ok && d.ficha ? d : null;
+  } catch { return null; }
 }
 
-function enviarCodigo(m) {
-  m.codigo = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1e6).padStart(6, '0');
-  m.intentos = 0;
-  mostrarCodigo(m);
+async function verificarCodigo(ficha, codigo, celular, motivo) {
+  try {
+    const r = await fetch('/api/codigo', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ accion: 'verificar', ficha, codigo, celular, motivo }),
+    });
+    return (await r.json()).resultado ?? 'sin_conexion';
+  } catch { return 'sin_conexion'; }
+}
+
+function anunciarCodigo(envio, para) {
+  if (envio.canal === 'simulado') return mostrarCodigo(envio.codigo, para);
+  avisar(`Te enviamos el código para ${para} a tu celular.`);
+}
+
+const ERROR_CODIGO = { vencido: 'El código venció. Pide otro con «Enviar otro código».', sin_conexion: 'No pudimos comprobar el código. Revisa tu conexión e inténtalo de nuevo.' };
+
+function leerResultado(m) {
+  const [, titulo, texto] = textoResultado(m);
+  hablar(`${titulo}. ${texto}${m.estado === 'desafio' && m.codigo ? ` Tu código es ${digitos(m.codigo)}.` : ''}`);
 }
 
 // El código no desaparece solo (WCAG 2.2.1): se cierra con el botón o al terminar la verificación.
-function mostrarCodigo(m) {
+function mostrarCodigo(codigo, para) {
   clearTimeout(avisar.t);
   const sms = document.getElementById('sms');
-  sms.innerHTML = `<p><b>Yuma</b> · Tu código para autorizar ${cop.format(m.monto)} es <b class="sms-codigo">${m.codigo}</b>. No lo compartas con nadie.</p>
+  sms.innerHTML = `<p><b>Yuma</b> · Tu código para ${esc(para)} es <b class="sms-codigo">${codigo}</b>. No lo compartas con nadie.</p>
     <div class="sms-acciones"><button type="button" data-sms="escuchar">${icono('altavoz', 'width="16" height="16"')}Escuchar código</button><button type="button" data-sms="cerrar">Cerrar</button></div>`;
-  sms.dataset.codigo = m.codigo;
+  sms.dataset.codigo = codigo;
   sms.hidden = false;
+  if (ajustes().voz) hablar(`Tu código es ${digitos(codigo)}`);
 }
 
 function cerrarDesafio(m, estadoFinal) {
   m.estado = estadoFinal;
   delete m.codigo;
+  delete m.ficha;
   if (estadoFinal === 'verificada') usuario().saldo -= m.monto;
   document.getElementById('sms').hidden = true;
   guardar();
@@ -536,11 +579,7 @@ app.addEventListener('click', (ev) => {
   switch (d.accion) {
     case 'elegir': ir('ingreso', { celular: d.celular }); return app.querySelector('#clave')?.focus();
     case 'escuchar': return leerResultado(usuario().movimientos.find((x) => x.id === vista.id));
-    case 'ver-codigo': {
-      const m = usuario().movimientos.find((x) => x.id === vista.id);
-      mostrarCodigo(m);
-      return hablar(`Tu código es ${digitos(m.codigo)}`);
-    }
+    case 'otro-codigo': return otroCodigo();
     case 'ir': return ir(d.vista);
     case 'operar': return ir('operacion', { op: d.op, ...borrador });
     case 'destino': return ir('operacion', { ...vista, ...borrador, destino: d.id, error: '' });
@@ -584,22 +623,69 @@ app.addEventListener('submit', (ev) => {
     const cel = soloDigitos(f.celular.value);
     const u = estado.usuarios[cel];
     if (!u || u.clave !== f.clave.value) return ir('ingreso', { celular: cel, error: 'Celular o clave incorrectos.', campo: 'clave' });
-    estado.sesion = cel;
-    guardar();
-    consultarSalud();
-    return ir('inicio');
+    return iniciarDosPasos(cel);
   }
+  if (f.dataset.form === 'dos-pasos') return confirmarIngreso(f.codigo.value.trim());
   if (f.dataset.form === 'operacion') {
     return autorizar({ clave: vista.op, destino: limpiarDestino(f.destino.value), monto: Number(soloDigitos(f.monto.value)) });
   }
-  if (f.dataset.form === 'codigo') {
-    const m = usuario().movimientos.find((x) => x.id === vista.id);
-    if (f.codigo.value.trim() === m.codigo) return cerrarDesafio(m, 'verificada');
-    m.intentos += 1;
-    if (m.intentos >= 3) return cerrarDesafio(m, 'cancelada');
-    return ir('resultado', { id: m.id, error: `Código incorrecto. Te quedan ${3 - m.intentos} intentos.`, campo: 'codigo' });
-  }
+  if (f.dataset.form === 'codigo') return confirmarDesafio(f.codigo.value.trim());
 });
+
+let verificando = false; // evita que un doble envío gaste dos intentos
+async function iniciarDosPasos(celular) {
+  const envio = await pedirCodigo(celular, 'ingreso');
+  if (!envio) return ir('ingreso', { celular, error: 'No pudimos enviar el código. Intenta de nuevo.', campo: 'clave' });
+  ir('dos-pasos', { celular, ficha: envio.ficha, canal: envio.canal, intentos: 0 });
+  anunciarCodigo(envio, 'entrar a Yuma');
+}
+
+async function confirmarIngreso(codigo) {
+  if (verificando) return;
+  verificando = true;
+  const resultado = await verificarCodigo(vista.ficha, codigo, vista.celular, 'ingreso').finally(() => { verificando = false; });
+  if (resultado === 'valido') {
+    estado.sesion = vista.celular;
+    guardar();
+    document.getElementById('sms').hidden = true;
+    consultarSalud();
+    return ir('inicio');
+  }
+  if (resultado !== 'incorrecto') return ir('dos-pasos', { ...vista, error: ERROR_CODIGO[resultado], campo: 'codigo' });
+  const intentos = vista.intentos + 1;
+  if (intentos >= 3) return ir('ingreso', { celular: vista.celular, error: 'Demasiados intentos. Escribe tu clave otra vez.', campo: 'clave' });
+  ir('dos-pasos', { ...vista, intentos, error: `Código incorrecto. Te quedan ${3 - intentos} intentos.`, campo: 'codigo' });
+}
+
+async function confirmarDesafio(codigo) {
+  if (verificando) return;
+  const m = usuario().movimientos.find((x) => x.id === vista.id);
+  verificando = true;
+  const resultado = await verificarCodigo(m.ficha, codigo, usuario().celular, 'operacion').finally(() => { verificando = false; });
+  if (m.estado !== 'desafio') return;
+  if (resultado === 'valido') return cerrarDesafio(m, 'verificada');
+  if (resultado !== 'incorrecto') return ir('resultado', { id: m.id, error: ERROR_CODIGO[resultado], campo: 'codigo' });
+  m.intentos += 1;
+  if (m.intentos >= 3) return cerrarDesafio(m, 'cancelada');
+  guardar();
+  ir('resultado', { id: m.id, error: `Código incorrecto. Te quedan ${3 - m.intentos} intentos.`, campo: 'codigo' });
+}
+
+async function otroCodigo() {
+  if (vista.nombre === 'dos-pasos') {
+    const envio = await pedirCodigo(vista.celular, 'ingreso');
+    if (!envio) return ir('dos-pasos', { ...vista, error: 'No pudimos enviar otro código. Intenta de nuevo.', campo: 'codigo' });
+    ir('dos-pasos', { ...vista, ficha: envio.ficha, canal: envio.canal, error: '' });
+    return anunciarCodigo(envio, 'entrar a Yuma');
+  }
+  const m = usuario().movimientos.find((x) => x.id === vista.id);
+  const envio = await pedirCodigo(usuario().celular, 'operacion', m.monto);
+  if (!envio) return ir('resultado', { id: m.id, error: 'No pudimos enviar otro código. Intenta de nuevo.', campo: 'codigo' });
+  Object.assign(m, { ficha: envio.ficha, canal: envio.canal, codigo: envio.codigo });
+  guardar();
+  ir('resultado', { id: m.id });
+  anunciarCodigo(envio, `autorizar ${cop.format(m.monto)}`);
+}
 
 // Revisa si un analista resolvió alguna retención. revisando evita que dos rondas descuenten dos veces.
 let revisando = false;

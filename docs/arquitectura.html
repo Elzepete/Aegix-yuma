@@ -273,7 +273,7 @@ a:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; border-r
         <text x="1086" y="182" class="s">reporta la decisión</text>
       </svg>
     </div>
-    <figcaption>Dos claves protegen el equipo: la billetera presenta <code>AEGIX_TOKEN</code> (el mismo valor que <code>YUMA_PANEL_TOKEN</code> en aegix) y el analista escribe <code>YUMA_PANEL_CLAVE</code>. <code>/score</code>, <code>/metricas</code> y la resolución de casos no son alcanzables desde internet sin la contraseña. Si se cae internet, todo corre en local (plan B en <code>docs/despliegue.md</code>).</figcaption>
+    <figcaption>No dibujado: con <code>NTFY_URL</code>, Vercel envía los códigos de verificación y aegix los avisos de cada decisión a la app ntfy del celular. Dos claves protegen el equipo: la billetera presenta <code>AEGIX_TOKEN</code> (el mismo valor que <code>YUMA_PANEL_TOKEN</code> en aegix) y el analista escribe <code>YUMA_PANEL_CLAVE</code>. <code>/score</code>, <code>/metricas</code> y la resolución de casos no son alcanzables desde internet sin la contraseña. Si se cae internet, todo corre en local (plan B en <code>docs/despliegue.md</code>).</figcaption>
   </figure>
 
   <!-- 2. Motor -->
@@ -582,6 +582,8 @@ a:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; border-r
       <tr><td>Clave HMAC</td><td><code>datos/decisiones.jsonl.clave</code> o <code>YUMA_AUDIT_KEY</code></td><td>Permisos 0600; sin ella las referencias no se pueden recalcular</td><td>No</td></tr>
       <tr><td><code>YUMA_PANEL_TOKEN</code> / <code>AEGIX_TOKEN</code></td><td>Variable de entorno en el equipo y en Vercel</td><td>Bearer entre la billetera y aegix; nunca llega al navegador</td><td>No</td></tr>
       <tr><td><code>YUMA_PANEL_CLAVE</code></td><td>Variable de entorno en el equipo</td><td>Contraseña del panel; se compara en tiempo constante</td><td>No</td></tr>
+      <tr><td>Códigos de verificación</td><td>Solo en el celular (ntfy) o en la pantalla si no hay celular</td><td>El servidor no los guarda: firma una ficha HMAC con celular, motivo y vencimiento (10 min)</td><td>No aplica</td></tr>
+      <tr><td>Avisos al celular</td><td>Tema de ntfy en <code>NTFY_URL</code></td><td>Nombre largo y aleatorio; solo datos de la demo; opcional</td><td>No</td></tr>
       <tr><td>Historial por cliente</td><td>Memoria de aegix</td><td>Se pierde al reiniciar; no se escribe a disco</td><td>No aplica</td></tr>
       <tr><td>Reglas</td><td><code>config/reglas.yaml</code></td><td>Validadas al cargar; un archivo inválido se ignora</td><td>Sí</td></tr>
       <tr><td>Datos y documentos del reto</td><td>Fuera del repositorio</td><td>Son de los organizadores</td><td>No</td></tr>
@@ -597,6 +599,7 @@ a:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; border-r
       <tr><td><code>POST /v1/autorizar</code></td><td>Función de Vercel de la billetera</td><td>Bearer</td><td>Sí, por la consola</td></tr>
       <tr><td><code>GET /v1/autorizar/{id}</code></td><td>La billetera pregunta si la liberaron</td><td>Bearer</td><td>Sí, por la consola</td></tr>
       <tr><td><code>GET /salud</code></td><td>Comprobación de vida</td><td>No</td><td>Sí</td></tr>
+      <tr><td><code>POST /api/codigo</code> (Vercel)</td><td>Billetera: emite y verifica el código del ingreso en dos pasos y de los desafíos</td><td>Ficha firmada con HMAC</td><td>Sí, en Vercel</td></tr>
       <tr><td><code>POST /score</code></td><td>Simulador del reto</td><td>No</td><td>No</td></tr>
       <tr><td><code>GET /alertas</code>, <code>/decisiones</code>, <code>/indicadores</code></td><td>Consola: cola, actividad, indicadores</td><td>Bearer</td><td>Solo con contraseña</td></tr>
       <tr><td><code>POST /alertas/{ref}/resolucion</code></td><td>Analista: liberar o confirmar fraude</td><td>Bearer</td><td>Solo con contraseña</td></tr>
@@ -624,7 +627,7 @@ a:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; border-r
       <tr><td>Servicio de decisión de riesgo</td><td>aegix: <code>/v1/autorizar</code> y <code>/score</code>, cuatro decisiones con razones</td><td><span class="estado hecho">Construido</span></td></tr>
       <tr><td>Motor de reglas en tiempo real</td><td><code>reglas.yaml</code> etapa-5.3, recarga sin reiniciar</td><td><span class="estado hecho">Construido</span></td></tr>
       <tr><td>Perfil de comportamiento</td><td>Historial por cliente en memoria: hora habitual, ráfagas, países</td><td><span class="estado hecho">Construido</span></td></tr>
-      <tr><td>Autenticación adaptativa</td><td>Código de un solo uso cuando aegix pide desafío</td><td><span class="estado parcial">Simulado</span></td></tr>
+      <tr><td>Autenticación adaptativa</td><td>Ingreso en dos pasos y código cuando aegix pide desafío, emitidos y verificados en el servidor; llegan al celular por ntfy</td><td><span class="estado hecho">Construido</span></td></tr>
       <tr><td>Gestión de casos</td><td>Consola en vivo: el analista libera o confirma fraude y la billetera lo ve en segundos</td><td><span class="estado hecho">Construido</span></td></tr>
       <tr><td>Etiquetas confirmadas</td><td>Cada resolución alimenta la calibración (<code>--auditoria</code>); la publicación de reglas la aprueba una persona</td><td><span class="estado hecho">Construido</span></td></tr>
       <tr><td>Auditoría</td><td>JSONL de solo agregar con referencias HMAC, archivada entre demos</td><td><span class="estado hecho">Construido</span></td></tr>

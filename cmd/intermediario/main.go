@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"escudo-yuma/internal/api"
+	"escudo-yuma/internal/avisos"
 	"escudo-yuma/internal/contexto"
 	"escudo-yuma/internal/defensas"
 	"escudo-yuma/internal/registro"
@@ -89,6 +90,9 @@ func main() {
 		log.Fatalf("no se pudo abrir la auditoría: %v", err)
 	}
 	cfg.Registro, cfg.ClavePanel = auditoria, clavePanel
+	if cfg.Avisos, err = avisos.Nuevo(os.Getenv("NTFY_URL")); err != nil {
+		log.Fatal(err)
+	}
 
 	servidor := &http.Server{
 		Addr:              *direccion,
