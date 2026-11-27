@@ -22,7 +22,7 @@ import (
 
 type Variables struct {
 	Tor, Proxy, HoraAtipica, PaisNuevo, DispositivoNuevo, CambioSIM, CambioClave, DestinoNuevo bool
-	CuentaNueva, DepartamentoDistinto                                                          bool
+	CuentaNueva, DepartamentoDistinto, ComercioDesconocido                                     bool
 	MontoSobrePercentil, MontoSobreSaldo                                                       float64
 	SalidasRecientes                                                                           int
 }
@@ -46,7 +46,9 @@ type Config struct {
 	// Operaciones en las que el dinero no sale hacia un tercero (recargas, servicios). En los datos del reto no
 	// tienen ni un fraude: su decisión baja un escalón para no frenar a clientes legítimos.
 	TiposBajoRiesgo []string `yaml:"tipos_bajo_riesgo"`
-	Reglas          []regla  `yaml:"reglas"`
+	// Un comercio con menos clientes previos que este número cuenta como desconocido (engaño con QR); 0 la desactiva.
+	MinClientesComercio int     `yaml:"min_clientes_comercio"`
+	Reglas              []regla `yaml:"reglas"`
 }
 
 // Ajustar baja un escalón la decisión de los tipos de bajo riesgo: retener pasa a desafiar y desafiar a aprobar.
@@ -139,7 +141,7 @@ func leer(ruta string) (Config, [32]byte, error) {
 	if strings.TrimSpace(cfg.Version) == "" || cfg.DiasMonto < 1 || cfg.DiasMonto > 365 ||
 		cfg.Percentil < 1 || cfg.Percentil > 100 || cfg.MinMontos < 1 ||
 		cfg.MinutosSalidas < 1 || cfg.MinutosSalidas > 1440 || len(cfg.Reglas) == 0 ||
-		cfg.DiasCuentaNueva < 0 || cfg.DiasCuentaNueva > 3650 {
+		cfg.DiasCuentaNueva < 0 || cfg.DiasCuentaNueva > 3650 || cfg.MinClientesComercio < 0 || cfg.MinClientesComercio > 1000 {
 		return cfg, huella, fmt.Errorf("versión, ventanas, percentil, muestra o lista de reglas inválidos")
 	}
 	if err := cfg.Umbrales.Validar(); err != nil {
@@ -162,6 +164,9 @@ func leer(ruta string) (Config, [32]byte, error) {
 		}
 		if r.Senal == "cuenta_nueva" && cfg.DiasCuentaNueva == 0 {
 			return cfg, huella, fmt.Errorf("la regla cuenta_nueva requiere dias_cuenta_nueva")
+		}
+		if r.Senal == "comercio_desconocido" && cfg.MinClientesComercio == 0 {
+			return cfg, huella, fmt.Errorf("la regla comercio_desconocido requiere min_clientes_comercio")
 		}
 		vistas[r.Senal] = true
 	}
@@ -219,6 +224,8 @@ func (v Variables) valor(senal string) (float64, bool, bool) {
 		activa = v.CuentaNueva
 	case "departamento_distinto":
 		activa = v.DepartamentoDistinto
+	case "comercio_desconocido":
+		activa = v.ComercioDesconocido
 	case "monto_sobre_percentil":
 		return v.MontoSobrePercentil, true, true
 	case "monto_sobre_saldo":

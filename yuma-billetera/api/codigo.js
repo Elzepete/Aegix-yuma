@@ -44,6 +44,20 @@ export function temaNtfy(valor) {
   } catch { return null; }
 }
 
+// Límite de uso: frena que alguien llene de notificaciones el celular o pruebe códigos al azar.
+// shortcut: vive en la memoria de cada instancia de Vercel; para producción, un almacén compartido (Vercel KV, Redis).
+const VENTANA_MS = 10 * 60 * 1000;
+export const LIMITES = { enviarCelular: 8, enviarIp: 30, verificarCelular: 20 }; // holgado para ensayar la demo seguida
+const usos = new Map();
+export function permitir(clave, maximo, ahora = Date.now()) {
+  if (usos.size > 5000) usos.clear(); // tope de memoria: perder la cuenta es preferible a crecer sin fin
+  const recientes = (usos.get(clave) ?? []).filter((t) => ahora - t < VENTANA_MS);
+  const ok = recientes.length < maximo;
+  if (ok) recientes.push(ahora);
+  usos.set(clave, recientes);
+  return ok;
+}
+
 function json(datos, estado = 200) {
   return new Response(JSON.stringify(datos), {
     status: estado,
@@ -61,8 +75,14 @@ export async function POST(request) {
   const montoValido = Number.isInteger(e.monto) && e.monto > 0 && e.monto < 1e11;
   const destino = typeof e.destino === 'string' && /^[A-Z0-9]{4,20}$/.test(e.destino) ? e.destino : '';
   const operacion = e.motivo === 'operacion' ? `${montoValido ? e.monto : ''}|${destino}` : '';
-  if (e.accion === 'verificar') return json({ resultado: comprobar(e.ficha, e.codigo, e.celular, e.motivo, Date.now(), operacion) });
+  const demasiados = json({ error: 'Demasiados intentos. Espera unos minutos y vuelve a intentarlo.' }, 429);
+  if (e.accion === 'verificar') {
+    if (!permitir(`v:${e.celular}`, LIMITES.verificarCelular)) return demasiados;
+    return json({ resultado: comprobar(e.ficha, e.codigo, e.celular, e.motivo, Date.now(), operacion) });
+  }
   if (e.accion !== 'enviar') return json({ error: 'acción desconocida' }, 400);
+  const ip = (request.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'sin-ip';
+  if (!permitir(`e:${e.celular}`, LIMITES.enviarCelular) || !permitir(`i:${ip}`, LIMITES.enviarIp)) return demasiados;
 
   // El mensaje dice qué se autoriza: monto y los últimos 4 caracteres del destino.
   const monto = (montoValido ? ` ${pesos.format(e.monto)}` : '') + (destino ? ` a •••${destino.slice(-4)}` : '');

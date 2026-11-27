@@ -313,6 +313,9 @@ func puntuar(ctx context.Context, proveedor contexto.Proveedor, historial *conte
 		CuentaNueva:          t.AntiguedadCuentaDias < reglasActivas.DiasCuentaNueva,
 		DepartamentoDistinto: t.IPDepartamentoDistinto == 1,
 	}
+	if t.TipoDestino == "comercio" && reglasActivas.MinClientesComercio > 0 {
+		v.ComercioDesconocido = historial.ClientesPrevios(t.Destino, t.Cliente, reglasActivas.MinClientesComercio) < reglasActivas.MinClientesComercio
+	}
 	if resumen.PercentilMonto > 0 {
 		v.MontoSobrePercentil = float64(t.MontoCOP) / float64(resumen.PercentilMonto)
 	}

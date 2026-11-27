@@ -165,3 +165,19 @@ test('ntfy: solo acepta un tema https válido', async () => {
   assert.deepEqual(temaNtfy('https://ntfy.sh/yuma-demo_8f3k'), { servidor: 'https://ntfy.sh', nombre: 'yuma-demo_8f3k' });
   for (const malo of ['', undefined, 'http://ntfy.sh/tema', 'https://ntfy.sh/', 'https://ntfy.sh/a/b', 'no es url']) assert.equal(temaNtfy(malo), null, String(malo));
 });
+
+test('códigos: límite de uso por celular para pedir y para verificar', async () => {
+  const { POST, LIMITES, permitir } = await import('./api/codigo.js');
+  assert.equal(permitir('x', 2, 0), true);
+  assert.equal(permitir('x', 2, 1), true);
+  assert.equal(permitir('x', 2, 2), false, 'el tercero en la ventana se rechaza');
+  assert.equal(permitir('x', 2, 10 * 60 * 1000 + 5), true, 'pasada la ventana vuelve a permitir');
+  const pedir = (cuerpo) => POST(new Request('http://x/api/codigo', { method: 'POST', headers: { 'x-forwarded-for': '198.51.100.7' }, body: JSON.stringify(cuerpo) }));
+  const estados = [];
+  for (let i = 0; i <= LIMITES.enviarCelular; i++) estados.push((await pedir({ accion: 'enviar', celular: '3001234567', motivo: 'ingreso' })).status);
+  assert.deepEqual(estados.slice(0, -1), Array(LIMITES.enviarCelular).fill(200));
+  assert.equal(estados.at(-1), 429, 'pasado el límite responde 429');
+  const v = [];
+  for (let i = 0; i <= LIMITES.verificarCelular; i++) v.push((await pedir({ accion: 'verificar', celular: '3007654321', motivo: 'ingreso', ficha: 'x.y', codigo: '000000' })).status);
+  assert.equal(v.at(-1), 429, 'no se pueden probar códigos sin fin');
+});

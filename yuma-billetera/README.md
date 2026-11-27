@@ -17,7 +17,8 @@ Saldos y movimientos viven en el `localStorage` del navegador (es una demo).
 
 **Verificación en dos pasos.** Después de la clave, la billetera pide un código de 6 dígitos; también cuando aegix
 decide *desafiar* y en **cada transferencia** (aunque aegix apruebe, la plata sale solo con el código; se desactiva
-en Seguridad). El código de una operación queda atado a su monto y su destino. Lo emite y verifica `api/codigo.js` sin base de datos (ficha firmada con HMAC, vence a los
+en Seguridad). El código de una operación queda atado a su monto y su destino. `api/codigo.js` limita el uso (8 códigos por
+celular y 30 por IP cada 10 minutos; 20 verificaciones por celular) para que nadie llene de avisos el celular. Lo emite y verifica `api/codigo.js` sin base de datos (ficha firmada con HMAC, vence a los
 10 minutos, se puede pedir otro). Con `NTFY_URL=https://ntfy.sh/<tema>` llega al celular por la app ntfy, gratis y
 sin cuenta; sin ella aparece en pantalla como «SMS simulado».
 

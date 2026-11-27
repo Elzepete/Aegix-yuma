@@ -7,7 +7,7 @@
 # etapa-5.3 (falsos positivos): hora_atipica 0,10 → 0,05 y se retira monto_sobre_percentil; en mayo–agosto su lift
 # es 0,39 y 0,23 (el fraude no se concentra de madrugada ni supera el monto habitual: vacía el saldo).
 # Más tipos_bajo_riesgo. Ver docs/reporte-indicadores.md.
-version: etapa-5.3
+version: etapa-5.4
 umbrales: {desafiar: 0.35, retener: 0.65}
 dias_monto: 30
 percentil: 95
@@ -16,6 +16,9 @@ minutos_salidas: 10
 dias_cuenta_nueva: 30
 # Sin un solo fraude en los seis meses de datos: aquí la decisión baja un escalón (retener → desafiar, desafiar → aprobar).
 tipos_bajo_riesgo: [recarga_celular, pago_servicios, compra_tarjeta_virtual]
+# etapa-5.4 (engaño con QR): los comercios del fraude nunca reciben pagos legítimos. Un comercio al que le pagaron
+# menos de 4 clientes distintos es «desconocido». Elegido con mayo–agosto; en sep–oct los QR aprobados bajan de 39 a 5.
+min_clientes_comercio: 4
 reglas:
   - {senal: tor, peso: 0.35, razon: "conexión por un nodo de salida Tor"}
   - {senal: proxy, peso: 0.10, razon: "conexión desde un proxy o centro de datos"}
@@ -26,6 +29,7 @@ reglas:
   - {senal: cambio_sim, peso: 0.25, razon: "cambio reciente de SIM"}
   - {senal: cambio_clave, peso: 0.30, razon: "cambio reciente de clave"}
   - {senal: destino_nuevo, peso: 0.10, razon: "destino nuevo"}
+  - {senal: comercio_desconocido, peso: 0.25, razon: "comercio sin historial de pagos en Yuma"}
   - {senal: cuenta_nueva, peso: 0.15, razon: "cuenta con menos de 30 días"}
   - {senal: monto_sobre_saldo, umbral: 0.75, peso: 0.20, razon: "monto elevado frente al saldo disponible"}
   - {senal: salidas_recientes, umbral: 2, peso: 0.25, razon: "varias operaciones del cliente en los últimos 10 minutos"}

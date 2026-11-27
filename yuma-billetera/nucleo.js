@@ -76,6 +76,7 @@ const RAZON_FACIL = {
   'cambio reciente de SIM': 'Tu tarjeta SIM cambió hace poco.',
   'cambio reciente de clave': 'Cambiaste tu clave hace poco.',
   'destino nuevo': 'Nunca le habías enviado plata a este destino.',
+  'comercio sin historial de pagos en Yuma': 'Casi nadie le ha pagado a este comercio. Revisa que el código QR sea el correcto.',
   'cuenta con menos de 30 días': 'Tu cuenta es muy nueva.',
   'monto elevado frente al saldo disponible': 'Estás enviando casi toda tu plata.',
   'varias operaciones del cliente en los últimos 10 minutos': 'Hiciste varias operaciones en pocos minutos.',

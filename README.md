@@ -8,8 +8,9 @@ cada operación: aprobar, pedir un código, retener para un analista o rechazar,
 **Documentación navegable** (diagramas incluidos): https://elzepete.github.io/Aegix-yuma/ una vez activado
 GitHub Pages (*Settings → Pages → main /docs*).
 
-**Resultados** con las 120.972 transacciones del reto: 81,5 % del fraude detectado antes de autorizar (línea base
-62,6 %, después), 17,7 % de falsos positivos (hoy 89 %), p99 de 5,3 ms. Ver [reporte](docs/reporte-indicadores.md).
+**Resultados** con las 120.972 transacciones del reto: 86,5 % del fraude detectado antes de autorizar (línea base
+62,6 %, después), 22,5 % de falsos positivos (hoy 89 %), p99 de 3,5 ms. A igual fricción, las reglas detectan más
+que una regresión logística con las mismas señales (`herramientas/comparar_modelo.py`). Ver [reporte](docs/reporte-indicadores.md).
 
 | Documento | Para qué |
 | --- | --- |
@@ -85,17 +86,19 @@ el panel con la misma variable.
 `config/reglas.yaml` se calibró con `herramientas/calibrar_reglas.py` (mayo–agosto para ajustar,
 septiembre–octubre para validar). aegix recarga el archivo en caliente.
 
-| | etapa-5.1 | etapa-5.2 | etapa-5.3 | Línea base / meta |
-| --- | ---: | ---: | ---: | ---: |
-| Fraude detectado (validación sep–oct) | 46,2 % | 75,3 % | 75,3 % | 62,6 % |
-| Fraude detectado (sandbox, seis meses) | 41,3 %* | 81,4 % | 81,5 % | 62,6 % |
-| Falsos positivos (sandbox) | 0 % | 22,0 % | 17,7 % | < 60 % (hoy 89 %) |
-| Monto de fraude protegido (sandbox) | — | 87,1 % | 87,0 % | 85,4 % (después de autorizar) |
-| Clientes legítimos bloqueados | 0 % | 0,33 % | 0,25 % | |
+| | etapa-5.1 | etapa-5.2 | etapa-5.3 | etapa-5.4 | Línea base / meta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Fraude detectado (validación sep–oct) | 46,2 % | 75,3 % | 75,3 % | 82,2 % | 62,6 % |
+| Fraude detectado (sandbox, seis meses) | 41,3 %* | 81,4 % | 81,3 % | 86,5 % | 62,6 % |
+| Falsos positivos (sandbox) | 0 % | 22,0 % | 17,7 % | 22,5 %** | < 60 % (hoy 89 %) |
+| Monto de fraude protegido (sandbox) | — | 87,1 % | 87,0 % | 89,0 % | 85,4 % (después de autorizar) |
+| Clientes legítimos bloqueados | 0 % | 0,33 % | 0,25 % | 0,36 % | |
 
 \* primeras 20 000 transacciones. etapa-5.2 sumó `cuenta_nueva` (las cuentas mula son el 35 % del fraude) y
 `departamento_distinto`. etapa-5.3 bajó la fricción: `tipos_bajo_riesgo`, retiró el monto frente al historial y
-bajó la hora atípica (detalle en el [reporte](docs/reporte-indicadores.md)).
+bajó la hora atípica. etapa-5.4 ataca el engaño con QR con `comercio_desconocido` (en validación, QR aprobados de
+39 a 5 sin subir la fricción). \*\* La subida se concentra en mayo, cuando ningún comercio tiene historial
+(detalle en el [reporte](docs/reporte-indicadores.md)).
 
 **Ciclo del analista.** Las resoluciones de la consola entran a la calibración como etiquetas:
 

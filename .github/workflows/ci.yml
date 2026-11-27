@@ -41,6 +41,14 @@ jobs:
           curl -fsS http://127.0.0.1:4173/ | grep -q 'id="root"'
           curl -fsS http://127.0.0.1:4173/api/metricas | grep -q total_evaluadas
           curl -fsS http://127.0.0.1:3000/api/autorizar | grep -q en_linea
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: pruebas-e2e/package-lock.json
+      - name: Recorrido en un navegador real (Playwright)
+        working-directory: pruebas-e2e
+        run: npm ci && npx playwright install --with-deps chromium && npm test
       - name: Registros si algo falla
         if: failure()
         run: docker compose logs

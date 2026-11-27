@@ -31,14 +31,17 @@ Dos pantallas lado a lado: a la izquierda la **billetera** (celular o ventana an
 | 2:45–3:05 | «Si es el cliente legítimo con un SIM nuevo, no lo bloqueamos: le pedimos un código, que además se puede escuchar.» | *Seguridad → SIM swapping*. Enviar a Andrés → **código** → *Escuchar código* → escribirlo. |
 | 3:05–3:25 | «Las cuentas mula son el 35 % del fraude.» | *Salir*, ingresar como Julián (300 000 0004, clave 4444, cuenta de 21 días). Enviar «Todo» a un número nuevo → **código**. |
 | 3:25–3:45 | «La seguridad no puede dejar a nadie por fuera. Con lectura fácil, cada decisión se explica en frases cortas. Y probamos que las preferencias de accesibilidad nunca cambian el puntaje.» | *Accesibilidad → Lectura fácil*. Abrir un movimiento: razones en lenguaje sencillo. |
-| 3:45–4:20 | «Con las 120.972 operaciones del reto: detectamos 81,5 % del fraude, antes de autorizar, frente al 62,6 % de hoy. Los falsos positivos bajan de 89 % a 17,7 %. Decidimos en 5 ms en el peor 1 %.» | Diagrama, sección 8. |
+| 3:45–4:20 | «Con las 120.972 operaciones del reto: detectamos 86,5 % del fraude, antes de autorizar, frente al 62,6 % de hoy. Los falsos positivos bajan de 89 % a 22,5 %. Decidimos en menos de 4 ms en el peor 1 %.» | Diagrama, sección 8. |
 | 4:20–4:45 | «No es una caja negra: el puntaje es una suma de pesos que cualquiera puede rehacer, y cada resolución del analista entra a la próxima calibración.» | Diagrama, secciones 4 y 5. |
 | 4:45–5:00 | «aegix: el fraude se frena antes, el cliente legítimo casi no lo nota y el analista sabe por qué.» | Consola con el pulso en vivo. |
 
 ## Preguntas probables
 
-- **¿Por qué reglas y no un modelo de aprendizaje automático?** Porque se explican solas, se cambian sin
-  reentrenar y ya superan la meta. El siguiente paso es comparar un modelo con la misma validación temporal.
+- **¿Por qué reglas y no un modelo de aprendizaje automático?** Lo medimos: una regresión logística con las
+  mismas señales y la misma validación temporal detecta 80,2 % a igual fricción; las reglas, 82,2 %. Además las
+  reglas se explican solas y se cambian sin reentrenar.
+- **¿Y el engaño con QR?** Los comercios falsos nunca reciben pagos legítimos. Si a un comercio le han pagado
+  menos de 4 clientes, aegix pide un código: en validación, los QR aprobados bajaron de 39 a 5.
 - **¿Qué pasa si aegix se cae?** La billetera no mueve dinero (falla cerrada). Si aegix tarda más de 250 ms,
   pide un código en vez de aprobar.
 - **¿Y la privacidad?** aegix no guarda nombres ni celulares en claro: el identificador de la operación queda como
@@ -48,7 +51,7 @@ Dos pantallas lado a lado: a la izquierda la **billetera** (celular o ventana an
   lectura en voz alta y funciona con lector de pantalla y teclado. La consola tiene su propio menú de accesibilidad
   para el analista (texto grande, alto contraste, sin animaciones, casos nuevos leídos en voz alta). El cliente elige cómo lo contactan (incluida
   lengua de señas) y aegix se lo muestra al analista sin usarlo para decidir; hay una prueba que lo garantiza.
-- **¿Escala?** Más de 1.100 operaciones por segundo en un portátil; el pico exigido es 150.
+- **¿Escala?** 1.750 operaciones por segundo en un portátil; el pico exigido es 150.
 
 ## Plan B
 

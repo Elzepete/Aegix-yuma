@@ -251,7 +251,7 @@ a:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; border-r
         <rect x="1026" y="512" width="150" height="88" rx="10" class="disco"/>
         <text x="1101" y="536" text-anchor="middle" class="m">config/reglas.yaml</text>
         <text x="1101" y="554" text-anchor="middle" class="s">pesos y umbrales</text>
-        <text x="1101" y="570" text-anchor="middle" class="s">versión etapa-5.3</text>
+        <text x="1101" y="570" text-anchor="middle" class="s">versión etapa-5.4</text>
         <text x="1101" y="586" text-anchor="middle" class="s">recarga en caliente</text>
         <line x1="950" y1="468" x2="950" y2="510" class="linea" marker-end="url(#m1p)"/>
         <text x="944" y="494" text-anchor="end" class="s">escribe</text>
@@ -328,7 +328,7 @@ a:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; border-r
           <text x="966" y="134" class="m">contexto/historial.go</text>
           <text x="966" y="154" class="s">hora habitual, países vistos,</text>
           <text x="966" y="170" class="s">operaciones en 10 min</text>
-          <text x="966" y="186" class="s">(en memoria, por cliente)</text>
+          <text x="966" y="186" class="s">y clientes por comercio</text>
         </g>
         <line x1="232" y1="143" x2="254" y2="143" class="linea" marker-end="url(#m2p)"/>
         <line x1="464" y1="143" x2="486" y2="143" class="linea" marker-end="url(#m2p)"/>
@@ -392,7 +392,7 @@ a:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; border-r
         <!-- Plazo -->
         <rect x="488" y="398" width="688" height="44" rx="8" class="paso-activo"/>
         <text x="502" y="417" class="corte">Plazo de 250 ms para las etapas 4 a 8. Si se agota: desafiar, contingencia «tiempo_agotado».</text>
-        <text x="502" y="434" class="s">Nunca se aprueba a ciegas. Medido: p99 de 5,3 ms con 4 clientes en paralelo; máximo observado en tres corridas, 192 ms.</text>
+        <text x="502" y="434" class="s">Nunca se aprueba a ciegas. Medido: p99 de 3,5 ms con 4 clientes en paralelo y 1.750 transacciones por segundo.</text>
       </svg>
     </div>
     <figcaption>Las etapas 6 y 7 son toda la «inteligencia» y caben en una hoja: <code>config/reglas.yaml</code>. Cambiar un peso no requiere compilar ni reiniciar; aegix detecta el archivo nuevo, lo valida y, si es inválido, sigue con la versión anterior.</figcaption>
@@ -517,6 +517,7 @@ a:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; border-r
       <tr><td>Monto ≥ 75 % del saldo</td><td><span class="peso"><i style="--p:.2"></i>0,20</span></td><td>7,1×</td><td>La transacción</td></tr>
       <tr><td>Cuenta de menos de 30 días</td><td><span class="peso"><i style="--p:.15"></i>0,15</span></td><td>10,9×</td><td>La transacción</td></tr>
       <tr><td>País nuevo para el cliente</td><td><span class="peso"><i style="--p:.15"></i>0,15</span></td><td>—</td><td>Origen e historial; criterio experto</td></tr>
+      <tr><td>Comercio desconocido</td><td><span class="peso"><i style="--p:.25"></i>0,25</span></td><td>0,9× (95 % del engaño QR)</td><td>Historial de la plataforma: menos de 4 clientes le han pagado</td></tr>
       <tr><td>Destino nuevo</td><td><span class="peso"><i style="--p:.1"></i>0,10</span></td><td>4,5×</td><td>La transacción</td></tr>
       <tr><td>Departamento distinto</td><td><span class="peso"><i style="--p:.1"></i>0,10</span></td><td>6,4×</td><td>Origen; compara al cliente consigo mismo</td></tr>
       <tr><td>Proxy o centro de datos</td><td><span class="peso"><i style="--p:.1"></i>0,10</span></td><td>—</td><td>Origen; criterio experto</td></tr>
@@ -611,10 +612,10 @@ a:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; border-r
   <div class="lectura"><h2 id="resultados">8. Resultados medidos</h2>
     <p>Las 120.972 transacciones del reto pasadas por aegix y calificadas por el sandbox, con 4 clientes en paralelo. Detalle y método en <code>docs/reporte-indicadores.md</code>.</p></div>
   <div class="medidas">
-    <div class="medida"><b id="r-det">81,5 %</b><span>fraude detectado; la línea base detecta 62,6 % y después de autorizar</span></div>
-    <div class="medida"><b id="r-fp">17,7 %</b><span>falsos positivos; el motor actual tiene 89 %</span></div>
-    <div class="medida"><b id="r-p99">5,3 ms</b><span>p99 de latencia; el límite es 300 ms</span></div>
-    <div class="medida"><b id="r-tps">1.100+ TPS</b><span>sostenidos sin errores; el pico exigido es 150</span></div>
+    <div class="medida"><b id="r-det">86,5 %</b><span>fraude detectado; la línea base detecta 62,6 % y después de autorizar</span></div>
+    <div class="medida"><b id="r-fp">22,5 %</b><span>falsos positivos; el motor actual tiene 89 %</span></div>
+    <div class="medida"><b id="r-p99">3,5 ms</b><span>p99 de latencia; el límite es 300 ms</span></div>
+    <div class="medida"><b id="r-tps">1.750 TPS</b><span>sostenidos sin errores; el pico exigido es 150</span></div>
   </div>
 
   <!-- 9. Objetivo -->
@@ -625,7 +626,7 @@ a:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; border-r
     <tbody>
       <tr><td>Orquestador de transacciones</td><td>Función <code>/api/autorizar</code> en Vercel: pide la decisión antes de mover dinero</td><td><span class="estado hecho">Construido</span></td></tr>
       <tr><td>Servicio de decisión de riesgo</td><td>aegix: <code>/v1/autorizar</code> y <code>/score</code>, cuatro decisiones con razones</td><td><span class="estado hecho">Construido</span></td></tr>
-      <tr><td>Motor de reglas en tiempo real</td><td><code>reglas.yaml</code> etapa-5.3, recarga sin reiniciar</td><td><span class="estado hecho">Construido</span></td></tr>
+      <tr><td>Motor de reglas en tiempo real</td><td><code>reglas.yaml</code> etapa-5.4, recarga sin reiniciar</td><td><span class="estado hecho">Construido</span></td></tr>
       <tr><td>Perfil de comportamiento</td><td>Historial por cliente en memoria: hora habitual, ráfagas, países</td><td><span class="estado hecho">Construido</span></td></tr>
       <tr><td>Autenticación adaptativa</td><td>Ingreso en dos pasos y código cuando aegix pide desafío, emitidos y verificados en el servidor; llegan al celular por ntfy</td><td><span class="estado hecho">Construido</span></td></tr>
       <tr><td>Gestión de casos</td><td>Consola en vivo: el analista libera o confirma fraude y la billetera lo ve en segundos</td><td><span class="estado hecho">Construido</span></td></tr>
@@ -633,7 +634,7 @@ a:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; border-r
       <tr><td>Auditoría</td><td>JSONL de solo agregar con referencias HMAC, archivada entre demos</td><td><span class="estado hecho">Construido</span></td></tr>
       <tr><td>Observabilidad</td><td>Consola con pulso, latencia y SLA; <code>/metrics</code> listo para Prometheus</td><td><span class="estado parcial">Parcial</span></td></tr>
       <tr><td>Origen real (GeoIP y Tor)</td><td>Modo <code>-geoip -tor</code> implementado; falta la base MMDB y la lista pública de nodos</td><td><span class="estado parcial">Parcial</span></td></tr>
-      <tr><td>Modelo de aprendizaje automático</td><td>Compararlo contra las reglas con la misma validación temporal</td><td><span class="estado futuro">Siguiente fase</span></td></tr>
+      <tr><td>Modelo de aprendizaje automático</td><td>Regresión logística comparada con la misma validación temporal: a igual fricción las reglas detectan más (82,2 % frente a 80,2 %)</td><td><span class="estado parcial">Comparado</span></td></tr>
       <tr><td>Bus de eventos</td><td>RabbitMQ si hubiera varios consumidores; hoy la auditoría cumple ese papel</td><td><span class="estado futuro">Siguiente fase</span></td></tr>
     </tbody>
   </table></div>

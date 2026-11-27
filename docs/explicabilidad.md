@@ -40,12 +40,16 @@ Medido sobre las 120.972 operaciones del reto.
 | salidas recientes | 0,25 | 33,8 | 2 o más operaciones del cliente en 10 minutos | el defraudador vacía la cuenta en ráfaga |
 | monto sobre saldo | 0,20 | 7,1 | el monto es 75 % o más del saldo | vaciado de saldo |
 | cuenta nueva | 0,15 | 10,9 | cuenta de menos de 30 días | las cuentas mula son el 35 % del fraude y todas tienen menos de 90 días |
+| comercio desconocido | 0,25 | 0,9* | el comercio recibió pagos de menos de 4 clientes distintos | los comercios del engaño con QR nunca reciben pagos legítimos; cubre el 95 % de ese fraude |
 | destino nuevo | 0,10 | 4,5 | primer envío a ese destino en 180 días | está en el 90 % del fraude, pero también en mucha operación normal |
 | departamento distinto | 0,10 | 6,4 | la IP sale de otro departamento | señal de origen: no retiene sola |
 | hora atípica | 0,05 | 0,5 | hora en la que el cliente casi nunca opera | en estos datos el fraude **no** se concentra de madrugada; se deja como desempate |
 | Tor | 0,35 | — | IP de un nodo de salida Tor | criterio experto: no hay IP en los datos del reto |
 | proxy o centro de datos | 0,10 | — | IP de nube o proxy | criterio experto |
 | país nuevo | 0,15 | — | país fuera del historial del cliente | criterio experto |
+
+\* Sola parece débil porque al arrancar ningún comercio tiene historial; sumada a «destino nuevo» llega al umbral de
+desafío y en la validación bajó los engaños con QR aprobados de 39 a 5 sin subir la fricción (etapa-5.4).
 
 **Lo que quitamos.** «Monto alto frente al historial del cliente» tenía peso 0,20, pero en los datos su lift es 0,2:
 el fraude no supera el monto habitual, *vacía el saldo* (eso lo captura «monto sobre saldo»). Solo generaba
@@ -113,6 +117,7 @@ aegix no castiga a quien usa la billetera de otra manera.
 - Tor, proxy y país nuevo no se pueden calibrar con estos datos; sus pesos son criterio experto.
 - Las etiquetas del analista solo existen para operaciones retenidas: corrigen los falsos positivos de esa zona,
   no el fraude que se aprobó.
-- El engaño con QR (ingeniería social sobre un comercio falso) casi no deja señales técnicas: es el fraude que
-  más se escapa.
+- El engaño con QR se ataca con «comercio desconocido», pero esa señal necesita historial: tras reiniciar aegix,
+  todo comercio es desconocido hasta que lo paguen 4 clientes. La ingeniería social sobre transferencias (la
+  víctima opera desde su propio celular) es hoy el fraude que más se escapa.
 - El historial por cliente (hora habitual, salidas recientes) vive en memoria y empieza de cero en cada arranque.

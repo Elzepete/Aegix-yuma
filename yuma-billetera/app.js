@@ -543,6 +543,7 @@ async function pedirCodigo(celular, motivo, monto, destino) {
       body: JSON.stringify({ accion: 'enviar', celular, motivo, monto, destino }),
     });
     const d = await r.json();
+    if (r.status === 429) avisar(d.error, false);
     return r.ok && d.ficha ? d : null;
   } catch { return null; }
 }
@@ -565,7 +566,10 @@ function anunciarCodigo(envio, para) {
   avisar(`Te enviamos el código para ${para} a tu celular.`);
 }
 
-const ERROR_CODIGO = { vencido: 'El código venció. Pide otro con «Enviar otro código».', sin_conexion: 'No pudimos comprobar el código. Revisa tu conexión e inténtalo de nuevo.' };
+const ERROR_CODIGO = {
+  vencido: 'El código venció. Pide otro con «Enviar otro código».',
+  sin_conexion: 'No pudimos comprobar el código. Revisa tu conexión o espera unos minutos si hiciste muchos intentos.',
+};
 
 function leerResultado(m) {
   const [, titulo, texto] = textoResultado(m);

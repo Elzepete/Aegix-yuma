@@ -19,10 +19,34 @@ type observacion struct {
 type Historial struct {
 	mu       sync.Mutex
 	clientes map[string]map[string]observacion
+	// pagadores: clientes distintos que ya le pagaron a cada comercio, hasta el tope que piden las reglas.
+	pagadores map[string]map[string]struct{}
 }
 
 func NuevoHistorial() *Historial {
-	return &Historial{clientes: make(map[string]map[string]observacion)}
+	return &Historial{clientes: make(map[string]map[string]observacion), pagadores: make(map[string]map[string]struct{})}
+}
+
+// ClientesPrevios dice cuántos clientes distintos de este le pagaron antes al destino (como máximo tope) y anota
+// a este cliente. Un comercio de engaño con QR recién creado no tiene pagos previos de nadie.
+// shortcut: vive en memoria y empieza vacío al reiniciar; en producción saldría del registro de comercios de Yuma.
+func (h *Historial) ClientesPrevios(destino, cliente string, tope int) int {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	clientes := h.pagadores[destino]
+	if clientes == nil {
+		clientes = make(map[string]struct{})
+		h.pagadores[destino] = clientes
+	}
+	_, ya := clientes[cliente]
+	otros := len(clientes)
+	if ya {
+		otros--
+	}
+	if !ya && len(clientes) < tope+1 { // basta con saber si llega al tope
+		clientes[cliente] = struct{}{}
+	}
+	return min(otros, tope)
 }
 
 type Resumen struct {
