@@ -73,10 +73,17 @@ pantalla como «SMS simulado».
 
 ## 5. Arrancar aegix, la consola y el túnel (en tu equipo)
 
-**Túnel con dirección fija, una sola vez.** Crea una cuenta gratuita en ngrok.com, instala `ngrok`, ejecuta
+**Túnel con dirección fija, una sola vez.** Crea una cuenta gratuita en ngrok.com, descarga `ngrok` en `bin/` (o instálalo en el sistema), ejecuta
 `ngrok config add-authtoken <tu-authtoken>` y reclama tu dominio estático gratuito en *Domains*.
 
-**Cada vez que presentes:**
+**Cada vez que presentes.** Si guardaste las claves en `.env.despliegue` (ignorado por Git), basta con:
+
+```bash
+env (grep -v '^#' .env.despliegue) herramientas/iniciar.sh --tunel --demo-limpia   # fish
+set -a; source .env.despliegue; set +a; herramientas/iniciar.sh --tunel --demo-limpia   # bash o zsh
+```
+
+O define las variables a mano:
 
 ```bash
 export YUMA_PANEL_TOKEN=<paso 3>
