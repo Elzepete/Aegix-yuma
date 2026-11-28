@@ -143,7 +143,7 @@ if ('speechSynthesis' in window) {
   speechSynthesis.addEventListener('voiceschanged', () => { cargarVoces(); if (vista.nombre === 'accesibilidad') pintar(); });
 }
 const vozEspanol = () => voces.find((v) => /^es[-_]CO/i.test(v.lang)) || voces.find((v) => /^es\b/i.test(v.lang)) || voces.find((v) => /spanish|español/i.test(v.name));
-const SIN_VOZ = 'Este navegador no tiene voces instaladas. En Linux instala speech-dispatcher y espeak-ng y reinicia el navegador; en el celular funciona sin instalar nada.';
+const SIN_VOZ = 'Este navegador no tiene voces. En Linux: instala speech-dispatcher y espeak-ng, cierra el navegador por completo (Ctrl+Q) y vuelve a abrirlo. Firefox y Zen las usan; Chrome y los navegadores integrados en apps, no. En el celular funciona sin instalar nada.';
 
 function hablar(texto) {
   if (!('speechSynthesis' in window) || !voces.length) return avisar(SIN_VOZ, false);

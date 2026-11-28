@@ -1,6 +1,6 @@
 // Lectura en voz alta con las voces del sistema. En Linux el navegador las toma de speech-dispatcher:
 // sin él la lista llega vacía y se avisa qué instalar en vez de quedarse en silencio.
-export const SIN_VOZ = 'Este navegador no tiene voces instaladas. En Linux instala speech-dispatcher y espeak-ng y reinicia el navegador.';
+export const SIN_VOZ = 'Este navegador no tiene voces. En Linux: instala speech-dispatcher y espeak-ng, cierra el navegador por completo (Ctrl+Q) y vuelve a abrirlo. Firefox y Zen las usan; Chrome y los navegadores integrados en apps, no.';
 
 const disponible = () => typeof window !== 'undefined' && 'speechSynthesis' in window;
 const voces = () => (disponible() ? speechSynthesis.getVoices() : []);
