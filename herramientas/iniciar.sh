@@ -53,9 +53,10 @@ echo "aegix:   http://127.0.0.1:8081/salud"
 echo "consola: http://127.0.0.1:4173"
 
 if [[ $tunel == 1 ]]; then
-  if [[ -n "${NGROK_DOMINIO:-}" ]] && command -v ngrok >/dev/null; then
+  ngrok=$(command -v ngrok || echo bin/ngrok) # también sirve el binario descargado en bin/
+  if [[ -n "${NGROK_DOMINIO:-}" && -x "$ngrok" ]]; then
     echo "Túnel fijo: https://$NGROK_DOMINIO  (en Vercel: AEGIX_URL=https://$NGROK_DOMINIO)"
-    ngrok http --url="$NGROK_DOMINIO" 4173 --log=stdout >/dev/null & pids+=($!)
+    "$ngrok" http --url="$NGROK_DOMINIO" 4173 --log=stdout >/dev/null & pids+=($!)
   elif [[ -n "${CLOUDFLARE_TUNEL:-}" ]] && command -v cloudflared >/dev/null; then
     cloudflared tunnel run "$CLOUDFLARE_TUNEL" & pids+=($!)
   elif command -v cloudflared >/dev/null; then
