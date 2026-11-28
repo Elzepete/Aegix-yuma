@@ -29,7 +29,7 @@ RUN npm run build
 FROM node:20-alpine AS consola
 WORKDIR /app
 COPY --from=consola-build /src/dist ./dist
-COPY panel-etapa5/package.json panel-etapa5/proxy.mjs panel-etapa5/acceso.mjs panel-etapa5/usuarios.mjs panel-etapa5/transacciones-prueba.mjs ./
+COPY panel-etapa5/package.json panel-etapa5/proxy.mjs panel-etapa5/acceso.mjs panel-etapa5/bitacora.mjs panel-etapa5/usuarios.mjs panel-etapa5/transacciones-prueba.mjs ./
 USER node
 ENV YUMA_PANEL_HOST=0.0.0.0
 CMD ["node", "proxy.mjs"]

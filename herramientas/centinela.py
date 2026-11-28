@@ -145,8 +145,8 @@ def expediente(e: dict, n: int, linea: bytes, resolucion: dict, cadena: dict) ->
         f"- **Línea de la auditoría:** {n}",
         f"- **SHA-256 de la línea:** `{hashlib.sha256(linea).hexdigest()}`",
         f"- **Sello HMAC:** `{sello.group(1).decode() if sello else 'línea anterior al sello'}`",
-        f"- **Cadena completa:** {'ÍNTEGRA' if cadena['integra'] else 'ROTA, ver ALERTA_CADENA'} "
-        f"({cadena['selladas']} líneas selladas, verificada {datetime.now(timezone.utc):%Y-%m-%d %H:%M} UTC)",
+        # Sin hora ni conteos: el expediente solo se reescribe si cambia el caso o el estado de la cadena.
+        f"- **Cadena completa al escribir este expediente:** {'ÍNTEGRA' if cadena['integra'] else 'ROTA, ver ALERTA_CADENA'}",
         "",
         "## 7. Datos personales (Ley 1581 de 2012)",
         "- La auditoría no guarda nombres ni números de celular: la referencia es un seudónimo HMAC.",

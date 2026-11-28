@@ -3,6 +3,10 @@ import { createServer } from 'node:http';
 import { test } from 'node:test';
 import { base32, codigoTotp, firmarSesion, hashClave, leerSesion, verificarClave, verificarTotp } from './acceso.mjs';
 import { createPanelHandler } from './proxy.mjs';
+import { crearBitacora, verificarBitacora } from './bitacora.mjs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const SECRETO = base32(Buffer.from('12345678901234567890')); // vector de prueba del RFC 6238
 
@@ -37,7 +41,9 @@ test('ingreso con contraseña y código; el auditor no puede resolver casos', as
   const usuarios = new Map([['ana', { usuario: 'ana', rol: 'auditor', clave: await hashClave('clave-de-ana-123'), totp: SECRETO }]]);
   const llamadas = [];
   const request = async (url, init) => { llamadas.push([String(url), init]); return new Response('[]', { status: 200 }); };
-  const servidor = createServer(createPanelHandler({ engine: new URL('http://127.0.0.1:1'), usuarios, request }));
+  const archivo = join(mkdtempSync(join(tmpdir(), 'bitacora-')), 'accesos.jsonl');
+  const bitacora = crearBitacora({ archivo });
+  const servidor = createServer(createPanelHandler({ engine: new URL('http://127.0.0.1:1'), usuarios, request, bitacora }));
   await new Promise((r) => servidor.listen(0, '127.0.0.1', r));
   t.after(() => servidor.close());
   const base = `http://127.0.0.1:${servidor.address().port}`;
@@ -65,4 +71,14 @@ test('ingreso con contraseña y código; el auditor no puede resolver casos', as
   });
   assert.equal(resolver.status, 403);
   assert.ok(!llamadas.some(([u]) => u.includes('/resolucion')));
+
+  // Bitácora: quién entró, qué falló y qué se le negó, sin contraseñas ni códigos; cadena verificable.
+  const eventos = (await (await fetch(`${base}/api/accesos`, { headers: { cookie } })).json()).map((e) => e.evento);
+  assert.deepEqual(eventos, ['acceso_denegado', 'ingreso', 'ingreso_fallido', 'ingreso_fallido']);
+  const texto = readFileSync(archivo, 'utf8');
+  assert.doesNotMatch(texto, /clave-de-ana|"codigo"/);
+  assert.match(texto, /"motivo":"contraseña"/);
+  assert.deepEqual(verificarBitacora(texto), []);
+  writeFileSync(archivo, texto.replace('"motivo":"contraseña"', '"motivo":"otro"'));
+  assert.deepEqual(verificarBitacora(readFileSync(archivo, 'utf8')), [2]);
 });

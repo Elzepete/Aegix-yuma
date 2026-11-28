@@ -327,15 +327,30 @@ export function Latencia({ cubetas, sla }: { cubetas?: Metricas['histograma_late
 
 type Verificacion = { integra: boolean; lineas: number; selladas: number; previas_a_la_cadena: number; rupturas: { linea: number; motivo: string }[] };
 
-// Auditoría inmutable y marco normativo: verifica la cadena SHA-256 + HMAC cada 15 s.
+type Acceso = { ts: string; evento: string; usuario?: string | null; rol?: string | null; ip?: string; motivo?: string; accion?: string; ruta?: string };
+const EVENTO: Record<string, string> = {
+  ingreso: 'Ingresó', salida: 'Salió', ingreso_fallido: 'Ingreso fallido', ingreso_bloqueado: 'Ingreso bloqueado',
+  acceso_denegado: 'Acceso denegado', resolucion: 'Resolvió un caso', auditoria_exportada: 'Exportó la auditoría',
+  consola_iniciada: 'Consola iniciada',
+};
+const ALERTA_ACCESO = new Set(['ingreso_fallido', 'ingreso_bloqueado', 'acceso_denegado']);
+const hora = new Intl.DateTimeFormat('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'America/Bogota' });
+
+// Auditoría inmutable y marco normativo: verifica la cadena SHA-256 + HMAC y lee la bitácora de accesos cada 15 s.
 export function Cumplimiento() {
   const [v, setV] = useState<Verificacion | null>(null);
+  const [accesos, setAccesos] = useState<Acceso[]>([]);
   const [error, setError] = useState('');
   useEffect(() => {
     let vivo = true;
-    const consultar = () => fetch('/api/auditoria/verificar', { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then((d: Verificacion) => { if (vivo) { setV(d); setError(''); } }, (e: Error) => { if (vivo) setError(e.message); });
+    const consultar = () => {
+      fetch('/api/auditoria/verificar', { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+        .then((d: Verificacion) => { if (vivo) { setV(d); setError(''); } }, (e: Error) => { if (vivo) setError(e.message); });
+      fetch('/api/accesos', { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : []))
+        .then((d: Acceso[]) => { if (vivo) setAccesos(d.slice(0, 8)); }, () => {});
+    };
     consultar();
     const id = setInterval(consultar, 15000);
     return () => { vivo = false; clearInterval(id); };
@@ -352,6 +367,19 @@ export function Cumplimiento() {
           <p role="alert"><b style={{ color: 'var(--retener)' }}>Cadena rota.</b> Línea {v.rupturas[0]?.linea}: {v.rupturas[0]?.motivo}.</p>
         )}
       <p><a className="boton" href="/api/auditoria/exportar" download="auditoria-aegix.json">Exportar auditoría (JSON)</a></p>
+      <h4>Bitácora de accesos</h4>
+      {accesos.length ? (
+        <ol className="accesos">
+          {accesos.map((a, i) => (
+            <li key={`${a.ts}-${i}`} className={ALERTA_ACCESO.has(a.evento) ? 'alerta' : undefined}>
+              <span className="mono">{hora.format(new Date(a.ts))}</span>{' '}
+              <b>{EVENTO[a.evento] ?? a.evento}</b>
+              {a.usuario ? ` · ${a.usuario}${a.rol ? ` (${a.rol})` : ''}` : ''}
+              {a.motivo ? ` · ${a.motivo}` : ''}{a.accion ? ` · ${a.accion.replace('_', ' ')}` : ''}
+            </li>
+          ))}
+        </ol>
+      ) : <p>Sin eventos todavía.</p>}
       <ul className="normativa">
         <li><b>Ley 1581 de 2012:</b> sin nombres ni celulares en claro; los identificadores son seudónimos HMAC y la accesibilidad no entra al puntaje.</li>
         <li><b>SARLAFT:</b> toda retención la resuelve una persona y queda registrado quién.</li>

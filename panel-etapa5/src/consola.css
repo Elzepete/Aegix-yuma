@@ -186,3 +186,6 @@ html[data-sin-movimiento] *, html[data-sin-movimiento] *::before, html[data-sin-
 .cumplimiento .normativa { margin: 0; padding-left: 18px; font-size: 12.5px; display: grid; gap: 6px; }
 .sesion { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
 .sesion a { color: inherit; }
+.cumplimiento h4 { margin: 10px 0 4px; font-size: 13px; }
+.cumplimiento .accesos { margin: 0 0 10px; padding: 0; list-style: none; font-size: 12.5px; display: grid; gap: 3px; }
+.cumplimiento .accesos .alerta b { color: var(--retener); }

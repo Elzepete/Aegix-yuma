@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/netip"
@@ -24,6 +25,9 @@ import (
 )
 
 func main() {
+	// Logs estructurados en JSON (una línea por evento): los lee docker logs o cualquier recolector.
+	// El paquete log también pasa por aquí, así que los log.Printf existentes salen en el mismo formato.
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, nil)))
 	urlSandbox := os.Getenv("YUMA_SANDBOX_URL")
 	if urlSandbox == "" {
 		urlSandbox = "http://127.0.0.1:8080"

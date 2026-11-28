@@ -67,6 +67,18 @@ El comando imprime la contraseña y el secreto TOTP. En la app autenticadora eli
 configuración» y escribe el secreto. `iniciar.sh` usa el archivo automáticamente; con `--sin-clave` la consola
 queda abierta para una demostración. Con Docker: `YUMA_USUARIOS_DOCKER=/app/acceso/usuarios.json docker compose up`.
 
+## Logs
+
+| Log | Dónde | Qué registra |
+| --- | --- | --- |
+| Bitácora de seguridad de la consola | `datos/accesos.jsonl` (con `iniciar.sh`), salida estándar y panel «Bitácora de accesos» | Ingresos, intentos fallidos (con el factor que falló), bloqueos por intentos, accesos denegados por rol, resoluciones de casos y exportaciones de la auditoría. Cada línea lleva el SHA-256 de la anterior. Nunca guarda contraseñas ni códigos. |
+| aegix | Salida estándar, JSON (`log/slog`) | Arranque, cada decisión de la billetera (con la referencia HMAC recortada, nunca el identificador), cada resolución con su analista, exportaciones y `auditoria_alterada` si la verificación encuentra una ruptura. |
+| Centinela | Salida estándar y `datos/expedientes/ALERTA_*.json` | Expedientes escritos, cadena rota y oleadas. |
+| Auditoría de decisiones | `datos/decisiones.jsonl` | La evidencia sellada (arriba). |
+
+En Docker: `docker compose logs -f consola aegix centinela`. Cada servicio rota sus logs a los 10 MB (5 archivos).
+La bitácora de la consola solo la ven en pantalla los roles con permiso de auditoría (`GET /api/accesos`).
+
 ## Contenedores
 
 `docker compose up --build` levanta aegix, la consola, la billetera y el centinela. Todos corren con un usuario

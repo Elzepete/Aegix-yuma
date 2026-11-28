@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/netip"
 	"regexp"
@@ -39,6 +40,14 @@ type Config struct {
 }
 
 const tiempoEvaluacion = 250 * time.Millisecond
+
+// referenciaCorta: los logs llevan el seudónimo HMAC recortado, nunca el identificador de la billetera.
+func referenciaCorta(r *registro.Registro, id string) string {
+	if r == nil || id == "" {
+		return ""
+	}
+	return r.Referencia(id)[:16]
+}
 
 var analistaValido = regexp.MustCompile(`^[a-z0-9._-]{1,32} \((admin|analista|auditor|empleado)\)$`)
 
@@ -137,6 +146,7 @@ func Nuevo(cliente *sandbox.Cliente, cfg Config) http.Handler {
 			case err != nil:
 				responder(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 			default:
+				slog.Info("resolucion", "referencia", ref[:16], "accion", cuerpo.Resolucion, "analista", analista)
 				cfg.Avisos.Resolucion(cuerpo.Resolucion)
 				responder(w, http.StatusOK, map[string]string{"estado": cfg.Registro.Estado(ref)})
 			}
@@ -150,12 +160,16 @@ func Nuevo(cliente *sandbox.Cliente, cfg Config) http.Handler {
 				responder(w, http.StatusInternalServerError, map[string]string{"error": "no se pudo leer la auditoría"})
 				return
 			}
+			if !v.Integra {
+				slog.Error("auditoria_alterada", "rupturas", v.Rupturas)
+			}
 			responder(w, http.StatusOK, v)
 		})
 		mux.HandleFunc("GET /auditoria/exportar", func(w http.ResponseWriter, r *http.Request) {
 			if !proteger(w, r) {
 				return
 			}
+			slog.Info("auditoria_exportada", "ip", r.RemoteAddr)
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			w.Header().Set("Content-Disposition", `attachment; filename="auditoria-aegix.json"`)
 			w.Header().Set("Cache-Control", "no-store")
@@ -276,6 +290,10 @@ func Nuevo(cliente *sandbox.Cliente, cfg Config) http.Handler {
 			colector.RegistrarTransaccion(origen, decision.Accion, t.MontoCOP, salida.LatenciaMS, decision.Razones, confirmada)
 			if origen == "billetera" {
 				cfg.Avisos.Decision(decision.Accion, t.TipoOperacion, t.MontoCOP, decision.Razones)
+				// Solo la billetera: el simulador manda miles por segundo y ya quedan en la auditoría.
+				slog.Info("decision", "origen", origen, "decision", decision.Accion, "puntaje", decision.Puntaje,
+					"tipo", t.TipoOperacion, "monto_cop", t.MontoCOP, "latencia_ms", salida.LatenciaMS,
+					"referencia", referenciaCorta(cfg.Registro, t.ID), "razones", decision.Razones)
 			}
 			if reportar && !confirmada {
 				colector.RegistrarContingencia("sandbox_sin_confirmar")

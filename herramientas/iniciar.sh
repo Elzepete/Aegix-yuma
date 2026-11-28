@@ -68,12 +68,14 @@ terminar() { kill "${pids[@]}" 2>/dev/null || true; wait 2>/dev/null || true; }
 trap terminar EXIT INT TERM
 
 bin/intermediario -auditoria "$auditoria" & pids+=($!)
-node panel-etapa5/proxy.mjs & pids+=($!)
+# Logs: aegix escribe JSON a la terminal; la consola además guarda su bitácora de seguridad en datos/accesos.jsonl.
+YUMA_LOG_ACCESOS=datos/accesos.jsonl node panel-etapa5/proxy.mjs & pids+=($!)
 sleep 1
 python3 herramientas/centinela.py --auditoria "$auditoria" --expedientes datos/expedientes & pids+=($!)
 echo "aegix:     http://127.0.0.1:8081/salud"
 echo "consola:   http://127.0.0.1:4173"
 echo "centinela: expedientes y alertas en datos/expedientes/"
+echo "logs:      bitácora de accesos en datos/accesos.jsonl; decisiones de la billetera aquí, en JSON"
 
 if [[ $tunel == 1 ]]; then
   ngrok=$(command -v ngrok || echo bin/ngrok) # también sirve el binario descargado en bin/

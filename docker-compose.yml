@@ -15,6 +15,9 @@ x-endurecido: &endurecido
   security_opt: ["no-new-privileges:true"]
   tmpfs: ["/tmp:size=16m"]
   restart: unless-stopped
+  logging:                          # logs JSON de cada servicio: docker compose logs -f; rotan a los 10 MB
+    driver: json-file
+    options: { max-size: "10m", max-file: "5" }
 
 services:
   aegix:

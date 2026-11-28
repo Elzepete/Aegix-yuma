@@ -10,6 +10,7 @@ import { ejecutarPrueba } from './transacciones-prueba.mjs';
 import {
   PERMISOS, cargarUsuarios, crearLimitador, firmarSesion, hashClave, leerCookie, leerSesion, puede, verificarClave, verificarTotp,
 } from './acceso.mjs';
+import { crearBitacora } from './bitacora.mjs';
 
 const dist = fileURLToPath(new URL('./dist', import.meta.url));
 const routes = new Map([
@@ -23,6 +24,7 @@ const AUDITORIA = new Map([
   ['/api/auditoria/verificar', '/auditoria/verificar'],
   ['/api/auditoria/exportar', '/auditoria/exportar'],
 ]);
+const quien = (sesion) => (sesion ? { usuario: sesion.usuario, rol: sesion.rol } : { usuario: null, rol: null });
 const COOKIE = 'aegix_sesion';
 const esc = (t) => String(t).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
@@ -113,7 +115,9 @@ async function reenviarBilletera(req, res, pathname, engine, request) {
   }
 }
 
-export function createPanelHandler({ engine, sandbox, token, clave, usuarios, secretoSesion = randomBytes(32), request = fetch }) {
+export function createPanelHandler({
+  engine, sandbox, token, clave, usuarios, secretoSesion = randomBytes(32), request = fetch, bitacora = crearBitacora(),
+}) {
   let pruebaEnCurso = false;
   const limitador = crearLimitador();
   const ultimosPasos = new Map(); // un código TOTP no sirve dos veces
@@ -130,15 +134,20 @@ export function createPanelHandler({ engine, sandbox, token, clave, usuarios, se
     const f = new URLSearchParams(cuerpo);
     const usuario = String(f.get('usuario') ?? '').trim().toLowerCase().slice(0, 32);
     const ip = req.socket.remoteAddress ?? 'sin-ip';
-    if (limitador.bloqueado(usuario, ip)) return paginaIngreso(res, 429, 'Demasiados intentos. Espera 15 minutos.');
+    if (limitador.bloqueado(usuario, ip)) {
+      bitacora.registrar('ingreso_bloqueado', { usuario, ip });
+      return paginaIngreso(res, 429, 'Demasiados intentos. Espera 15 minutos.');
+    }
     const u = usuarios.get(usuario);
     const claveOk = await verificarClave(f.get('clave') ?? '', u?.clave ?? await ficticio);
     const paso = u && claveOk ? verificarTotp(u.totp, f.get('codigo'), Date.now(), ultimosPasos.get(usuario) ?? -1) : null;
     if (paso === null) {
       limitador.fallo(usuario, ip);
+      bitacora.registrar('ingreso_fallido', { usuario, ip, motivo: !u ? 'usuario desconocido' : !claveOk ? 'contraseña' : 'código TOTP' });
       return paginaIngreso(res, 401, 'Usuario, contraseña o código incorrectos.');
     }
     ultimosPasos.set(usuario, paso);
+    bitacora.registrar('ingreso', { usuario: u.usuario, rol: u.rol, ip });
     const seguro = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
     res.writeHead(303, {
       Location: '/',
@@ -159,6 +168,8 @@ export function createPanelHandler({ engine, sandbox, token, clave, usuarios, se
     if (usuarios) {
       if (pathname === '/ingresar') return ingresar(req, res);
       if (pathname === '/salir') {
+        const s = leerSesion(secretoSesion, leerCookie(req.headers.cookie, COOKIE));
+        if (s) bitacora.registrar('salida', quien(s));
         res.writeHead(303, { Location: '/ingresar', 'Set-Cookie': `${COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0` });
         return res.end();
       }
@@ -178,6 +189,7 @@ export function createPanelHandler({ engine, sandbox, token, clave, usuarios, se
     // Sin usuarios configurados (demo), la consola es de acceso abierto con todos los permisos.
     const permitido = (permiso) => {
       if (!sesion || puede(sesion.rol, permiso)) return true;
+      bitacora.registrar('acceso_denegado', { ...quien(sesion), ruta: pathname, permiso });
       error(res, 403, `Tu rol (${sesion.rol}) no permite esta acción.`);
       return false;
     };
@@ -185,6 +197,10 @@ export function createPanelHandler({ engine, sandbox, token, clave, usuarios, se
       return json(res, 200, sesion
         ? { usuario: sesion.usuario, rol: sesion.rol, permisos: PERMISOS[sesion.rol], acceso: 'soc' }
         : { usuario: null, rol: null, permisos: PERMISOS.admin, acceso: clave ? 'clave' : 'abierto' });
+    }
+    if (pathname === '/api/accesos') {
+      if (!permitido('auditar')) return;
+      return json(res, 200, bitacora.recientes());
     }
     if (pathname === '/api/prueba-transacciones') {
       if (!permitido('probar')) return;
@@ -235,6 +251,9 @@ export function createPanelHandler({ engine, sandbox, token, clave, usuarios, se
           redirect: 'error',
           signal: AbortSignal.timeout(2500),
         });
+        let accion = null;
+        try { accion = JSON.parse(cuerpo).resolucion; } catch { /* aegix responde el error */ }
+        bitacora.registrar('resolucion', { ...quien(sesion), referencia: resolucion[1].slice(0, 16), accion, estado_http: upstream.status });
         res.writeHead(upstream.status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
         return res.end(await upstream.text());
       } catch {
@@ -248,6 +267,7 @@ export function createPanelHandler({ engine, sandbox, token, clave, usuarios, se
     const auditoria = AUDITORIA.get(pathname);
     if (auditoria) {
       if (!permitido('auditar')) return;
+      if (pathname.endsWith('/exportar')) bitacora.registrar('auditoria_exportada', quien(sesion));
       try {
         const upstream = await request(new URL(auditoria, engine), {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -338,7 +358,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   } else if (!clave) {
     console.warn('Panel sin contraseña: define YUMA_USUARIOS (acceso 2FA) o YUMA_PANEL_CLAVE antes de exponerlo con un túnel.');
   }
-  const server = createServer(createPanelHandler({ engine, sandbox, token: process.env.YUMA_PANEL_TOKEN, clave, usuarios }));
+  // Bitácora de seguridad: siempre a la salida estándar; a un archivo si se define YUMA_LOG_ACCESOS.
+  const bitacora = crearBitacora({ archivo: process.env.YUMA_LOG_ACCESOS, salida: process.stdout });
+  bitacora.registrar('consola_iniciada', { acceso: usuarios ? 'soc' : clave ? 'clave' : 'abierto' });
+  const server = createServer(createPanelHandler({ engine, sandbox, token: process.env.YUMA_PANEL_TOKEN, clave, usuarios, bitacora }));
   // En Docker escucha en 0.0.0.0 dentro de la red privada del compose; en local, solo 127.0.0.1.
   server.listen(port, process.env.YUMA_PANEL_HOST ?? '127.0.0.1', () => {
     console.log(`Panel Etapa 5 en http://127.0.0.1:${server.address().port}`);
