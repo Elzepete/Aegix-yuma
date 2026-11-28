@@ -25,6 +25,18 @@ const AUDITORIA = new Map([
   ['/api/auditoria/exportar', '/auditoria/exportar'],
 ]);
 const quien = (sesion) => (sesion ? { usuario: sesion.usuario, rol: sesion.rol } : { usuario: null, rol: null });
+// Contexto de cada evento: desde dónde y con qué navegador, y un identificador corto de la sesión para
+// seguir lo que hizo una misma sesión (es un resumen de la cookie, no la cookie).
+const idSesion = (cookie) => (cookie ? createHash('sha256').update(cookie).digest('hex').slice(0, 10) : null);
+function contexto(req) {
+  const reenviada = String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim();
+  return {
+    ip: reenviada || req.socket.remoteAddress || 'sin-ip',
+    via_tunel: !!reenviada,
+    navegador: String(req.headers['user-agent'] ?? 'desconocido').slice(0, 160),
+    sesion: idSesion(leerCookie(req.headers.cookie, COOKIE)),
+  };
+}
 const COOKIE = 'aegix_sesion';
 const esc = (t) => String(t).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
@@ -83,7 +95,8 @@ function claveCorrecta(cabecera, clave) {
   return timingSafeEqual(resumen(texto.slice(texto.indexOf(':') + 1)), resumen(clave));
 }
 
-async function reenviarBilletera(req, res, pathname, engine, request) {
+async function reenviarBilletera(req, res, pathname, engine, request, bitacora) {
+  const inicio = performance.now();
   const metodo = pathname === '/v1/autorizar' ? 'POST' : 'GET';
   if (req.method !== metodo) {
     res.setHeader('Allow', metodo);
@@ -108,9 +121,22 @@ async function reenviarBilletera(req, res, pathname, engine, request) {
       redirect: 'error',
       signal: AbortSignal.timeout(2500),
     });
+    const texto = await upstream.text();
+    if (metodo === 'POST') {
+      // Cada autorización de la billetera que cruza el túnel; las consultas de estado (cada 4 s) no se registran.
+      let r = {};
+      try { r = JSON.parse(texto); } catch { /* respuesta no JSON */ }
+      const { ip, via_tunel } = contexto(req);
+      bitacora.registrar('billetera_autorizar', {
+        ip, via_tunel, estado_http: upstream.status, decision: r.decision ?? null, puntaje: r.puntaje ?? null,
+        razones: Array.isArray(r.razones) ? r.razones.slice(0, 5) : [], latencia_aegix_ms: r.latencia_ms ?? null,
+        duracion_ms: Math.round((performance.now() - inicio) * 10) / 10, version_reglas: r.version_reglas ?? null,
+      });
+    }
     res.writeHead(upstream.status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
-    return res.end(await upstream.text());
+    return res.end(texto);
   } catch {
+    if (metodo === 'POST') bitacora.registrar('billetera_sin_aegix', { ...contexto(req), error: 'Motor Go no disponible' });
     return error(res, 502, 'Motor Go no disponible');
   }
 }
@@ -135,7 +161,7 @@ export function createPanelHandler({
     const usuario = String(f.get('usuario') ?? '').trim().toLowerCase().slice(0, 32);
     const ip = req.socket.remoteAddress ?? 'sin-ip';
     if (limitador.bloqueado(usuario, ip)) {
-      bitacora.registrar('ingreso_bloqueado', { usuario, ip });
+      bitacora.registrar('ingreso_bloqueado', { usuario, ...contexto(req), ip });
       return paginaIngreso(res, 429, 'Demasiados intentos. Espera 15 minutos.');
     }
     const u = usuarios.get(usuario);
@@ -143,15 +169,19 @@ export function createPanelHandler({
     const paso = u && claveOk ? verificarTotp(u.totp, f.get('codigo'), Date.now(), ultimosPasos.get(usuario) ?? -1) : null;
     if (paso === null) {
       limitador.fallo(usuario, ip);
-      bitacora.registrar('ingreso_fallido', { usuario, ip, motivo: !u ? 'usuario desconocido' : !claveOk ? 'contraseña' : 'código TOTP' });
+      bitacora.registrar('ingreso_fallido', { usuario, ...contexto(req), ip, motivo: !u ? 'usuario desconocido' : !claveOk ? 'contraseña' : 'código TOTP' });
       return paginaIngreso(res, 401, 'Usuario, contraseña o código incorrectos.');
     }
     ultimosPasos.set(usuario, paso);
-    bitacora.registrar('ingreso', { usuario: u.usuario, rol: u.rol, ip });
+    const cookie = firmarSesion(secretoSesion, u.usuario, u.rol);
+    bitacora.registrar('ingreso', {
+      usuario: u.usuario, rol: u.rol, ...contexto(req), ip, sesion: idSesion(cookie),
+      vence: new Date(Date.now() + 8 * 3600 * 1000).toISOString(), permisos: PERMISOS[u.rol],
+    });
     const seguro = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
     res.writeHead(303, {
       Location: '/',
-      'Set-Cookie': `${COOKIE}=${firmarSesion(secretoSesion, u.usuario, u.rol)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${seguro}`,
+      'Set-Cookie': `${COOKIE}=${cookie}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${seguro}`,
     });
     return res.end();
   }
@@ -163,19 +193,20 @@ export function createPanelHandler({
     } catch {
       return error(res, 400, 'Ruta inválida');
     }
-    if (BILLETERA.test(pathname)) return reenviarBilletera(req, res, pathname, engine, request);
+    if (BILLETERA.test(pathname)) return reenviarBilletera(req, res, pathname, engine, request, bitacora);
     let sesion = null;
     if (usuarios) {
       if (pathname === '/ingresar') return ingresar(req, res);
       if (pathname === '/salir') {
         const s = leerSesion(secretoSesion, leerCookie(req.headers.cookie, COOKIE));
-        if (s) bitacora.registrar('salida', quien(s));
+        if (s) bitacora.registrar('salida', { ...quien(s), ...contexto(req) });
         res.writeHead(303, { Location: '/ingresar', 'Set-Cookie': `${COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0` });
         return res.end();
       }
       sesion = leerSesion(secretoSesion, leerCookie(req.headers.cookie, COOKIE));
       if (!sesion) {
         if (pathname.startsWith('/api/')) return error(res, 401, 'Ingresa a la consola con tu usuario y código.');
+        if (leerCookie(req.headers.cookie, COOKIE)) bitacora.registrar('sesion_invalida', { ...contexto(req), motivo: 'vencida o alterada' });
         res.writeHead(303, { Location: '/ingresar' });
         return res.end();
       }
@@ -189,7 +220,7 @@ export function createPanelHandler({
     // Sin usuarios configurados (demo), la consola es de acceso abierto con todos los permisos.
     const permitido = (permiso) => {
       if (!sesion || puede(sesion.rol, permiso)) return true;
-      bitacora.registrar('acceso_denegado', { ...quien(sesion), ruta: pathname, permiso });
+      bitacora.registrar('acceso_denegado', { ...quien(sesion), ...contexto(req), metodo: req.method, ruta: pathname, permiso });
       error(res, 403, `Tu rol (${sesion.rol}) no permite esta acción.`);
       return false;
     };
@@ -200,6 +231,10 @@ export function createPanelHandler({
     }
     if (pathname === '/api/accesos') {
       if (!permitido('auditar')) return;
+      if (req.url.includes('descargar=1')) {
+        bitacora.registrar('bitacora_descargada', { ...quien(sesion), ...contexto(req) });
+        res.setHeader('Content-Disposition', 'attachment; filename="bitacora-consola-aegix.json"');
+      }
       return json(res, 200, bitacora.recientes());
     }
     if (pathname === '/api/prueba-transacciones') {
@@ -239,6 +274,7 @@ export function createPanelHandler({
         cuerpo += parte;
         if (cuerpo.length > 1024) return error(res, 413, 'Solicitud demasiado grande');
       }
+      const inicio = performance.now();
       try {
         const upstream = await request(new URL(`/alertas/${resolucion[1]}/resolucion`, engine), {
           method: 'POST',
@@ -253,9 +289,15 @@ export function createPanelHandler({
         });
         let accion = null;
         try { accion = JSON.parse(cuerpo).resolucion; } catch { /* aegix responde el error */ }
-        bitacora.registrar('resolucion', { ...quien(sesion), referencia: resolucion[1].slice(0, 16), accion, estado_http: upstream.status });
+        const texto = await upstream.text();
+        let r = {};
+        try { r = JSON.parse(texto); } catch { /* respuesta no JSON */ }
+        bitacora.registrar('resolucion', {
+          ...quien(sesion), ...contexto(req), referencia: resolucion[1].slice(0, 16), accion, estado_http: upstream.status,
+          estado_caso: r.estado ?? null, error: r.error ?? null, duracion_ms: Math.round((performance.now() - inicio) * 10) / 10,
+        });
         res.writeHead(upstream.status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
-        return res.end(await upstream.text());
+        return res.end(texto);
       } catch {
         return error(res, 502, 'Motor Go no disponible');
       }
@@ -267,7 +309,7 @@ export function createPanelHandler({
     const auditoria = AUDITORIA.get(pathname);
     if (auditoria) {
       if (!permitido('auditar')) return;
-      if (pathname.endsWith('/exportar')) bitacora.registrar('auditoria_exportada', quien(sesion));
+      if (pathname.endsWith('/exportar')) bitacora.registrar('auditoria_exportada', { ...quien(sesion), ...contexto(req) });
       try {
         const upstream = await request(new URL(auditoria, engine), {
           headers: token ? { Authorization: `Bearer ${token}` } : {},

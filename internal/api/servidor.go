@@ -8,6 +8,7 @@ import (
 	"errors"
 	"log"
 	"log/slog"
+	"math"
 	"net/http"
 	"net/netip"
 	"regexp"
@@ -41,6 +42,56 @@ type Config struct {
 
 const tiempoEvaluacion = 250 * time.Millisecond
 
+// registrarDecision deja en el log todo el contexto de una decisión de la billetera, sin datos personales:
+// ni IP, ni huella del dispositivo, ni identificadores en claro (la referencia es el seudónimo HMAC recortado).
+func registrarDecision(origen string, cfg *reglas.Config, e defensas.Solicitud, d sandbox.Decision, s Respuesta, ref string) {
+	t, c := e.Transaccion, e.Contexto
+	nivel := slog.LevelInfo
+	if d.Accion == "retener" || d.Accion == "rechazar" {
+		nivel = slog.LevelWarn
+	}
+	sobreSaldo := 0.0
+	if t.SaldoAntesCOP > 0 {
+		sobreSaldo = float64(t.MontoCOP) / float64(t.SaldoAntesCOP)
+	}
+	contacto := ""
+	if c.Accesibilidad != nil {
+		contacto = c.Accesibilidad.Contacto
+	}
+	slog.Log(context.Background(), nivel, "decision",
+		"origen", origen, "referencia", ref, "decision", d.Accion, "puntaje", d.Puntaje,
+		"nivel_riesgo", cfg.Umbrales.ClasificarRiesgo(d.Puntaje), "razones", d.Razones,
+		"version_reglas", cfg.Version, "latencia_ms", s.LatenciaMS,
+		slog.Group("operacion", "tipo", t.TipoOperacion, "canal", t.Canal, "monto_cop", t.MontoCOP,
+			"monto_sobre_saldo", math.Round(sobreSaldo*100)/100, "tipo_destino", t.TipoDestino,
+			"antiguedad_cuenta_dias", t.AntiguedadCuentaDias, "fecha_hora", t.FechaHora),
+		slog.Group("senales", "dispositivo_nuevo", t.DispositivoNuevo == 1, "destino_nuevo", t.DestinoNuevo == 1,
+			"cambio_sim_48h", t.CambioSIM48h == 1, "cambio_clave_24h", t.CambioClave24h == 1,
+			"departamento_distinto", t.IPDepartamentoDistinto == 1, "tor", c.EsTor, "proxy", c.EsProxyODatacenter,
+			"pais_ip", c.PaisIP),
+		slog.Group("app", "version", c.VersionApp, "sistema_operativo", c.SistemaOperativo),
+		"contacto_accesible", contacto)
+}
+
+// resumenPeriodico escribe cada minuto, si hubo actividad, los totales y la latencia: así el log cuenta
+// también lo que pasa con el simulador sin una línea por operación.
+func resumenPeriodico(colector *ColectorMetricas, trabajos chan struct{}) {
+	var previo uint64
+	for range time.Tick(time.Minute) {
+		m := colector.Obtener(len(trabajos), cap(trabajos))
+		if m.TotalEvaluadas == previo {
+			continue
+		}
+		slog.Info("resumen_minuto", "estado", m.Estado, "evaluadas_total", m.TotalEvaluadas,
+			"nuevas", m.TotalEvaluadas-previo, "aprobadas", m.Aprobadas, "retenidas", m.Retenidas,
+			"rechazos", m.Rechazos, "rechazos_por_limite", m.RechazosPorLimite, "tps_actual", m.TPSActual,
+			"tps_pico", m.TPSPico, "latencia_p50_ms", m.LatenciaP50MS, "latencia_p99_ms", m.LatenciaP99MS,
+			"cumplimiento_sla_pct", m.CumplimientoSLAPct, "monto_protegido_cop", m.MontoProtegidoCOP,
+			"por_origen", m.PorOrigen)
+		previo = m.TotalEvaluadas
+	}
+}
+
 // referenciaCorta: los logs llevan el seudónimo HMAC recortado, nunca el identificador de la billetera.
 func referenciaCorta(r *registro.Registro, id string) string {
 	if r == nil || id == "" {
@@ -63,6 +114,7 @@ func Nuevo(cliente *sandbox.Cliente, cfg Config) http.Handler {
 	mux := http.NewServeMux()
 	trabajos := make(chan struct{}, 150)
 	colector := NuevoColector()
+	go resumenPeriodico(colector, trabajos)
 	if cfg.Registro != nil {
 		// Las métricas viven en memoria: se reconstruyen desde la auditoría para no perderlas al reiniciar.
 		err := cfg.Registro.Recorrer(func(e registro.Evento) {
@@ -223,6 +275,10 @@ func Nuevo(cliente *sandbox.Cliente, cfg Config) http.Handler {
 				salida := respuesta(inicio, version, decision)
 				colector.RegistrarTransaccion(origen, "rechazar", 0, salida.LatenciaMS, salida.Razones, false)
 				guardar(origen, salida, nil, false)
+				if origen == "billetera" { // del simulador quedan en la auditoría y en el resumen de cada minuto
+					slog.Warn("rechazo", "origen", origen, "http", estado, "razon", razon,
+						"referencia", referenciaCorta(cfg.Registro, id), "latencia_ms", salida.LatenciaMS)
+				}
 				responder(w, estado, salida)
 			}
 			entrada, err := defensas.Decodificar(http.MaxBytesReader(w, r.Body, 64<<10))
@@ -266,9 +322,12 @@ func Nuevo(cliente *sandbox.Cliente, cfg Config) http.Handler {
 			}
 			if errors.Is(err, context.DeadlineExceeded) {
 				colector.RegistrarContingencia("tiempo_agotado")
+				slog.Warn("contingencia", "tipo", "tiempo_agotado", "origen", origen, "plazo_ms", tiempoEvaluacion.Milliseconds(),
+					"accion", "se pide un código en vez de aprobar")
 				decision = sandbox.Decision{ID: id, Accion: "desafiar", Razones: []string{"tiempo de evaluación agotado"}}
 			} else if err != nil {
 				colector.RegistrarContingencia("origen_no_disponible")
+				slog.Error("contingencia", "tipo", "origen_no_disponible", "origen", origen, "error", err.Error())
 				responder(w, http.StatusServiceUnavailable, map[string]string{"error": "no se pudo consultar el origen local"})
 				return
 			}
@@ -291,9 +350,7 @@ func Nuevo(cliente *sandbox.Cliente, cfg Config) http.Handler {
 			if origen == "billetera" {
 				cfg.Avisos.Decision(decision.Accion, t.TipoOperacion, t.MontoCOP, decision.Razones)
 				// Solo la billetera: el simulador manda miles por segundo y ya quedan en la auditoría.
-				slog.Info("decision", "origen", origen, "decision", decision.Accion, "puntaje", decision.Puntaje,
-					"tipo", t.TipoOperacion, "monto_cop", t.MontoCOP, "latencia_ms", salida.LatenciaMS,
-					"referencia", referenciaCorta(cfg.Registro, t.ID), "razones", decision.Razones)
+				registrarDecision(origen, reglasActivas, entrada, decision, salida, referenciaCorta(cfg.Registro, t.ID))
 			}
 			if reportar && !confirmada {
 				colector.RegistrarContingencia("sandbox_sin_confirmar")

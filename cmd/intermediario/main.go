@@ -106,7 +106,13 @@ func main() {
 		WriteTimeout:      10 * time.Second,
 		IdleTimeout:       30 * time.Second,
 	}
-	log.Printf("intermediario en %s", *direccion)
+	reglasIniciales := motor.Instantanea()
+	slog.Info("aegix_iniciado", "escucha", *direccion, "version_reglas", reglasIniciales.Version,
+		"reglas", len(reglasIniciales.Reglas), "umbral_desafiar", reglasIniciales.Umbrales.Desafiar,
+		"umbral_retener", reglasIniciales.Umbrales.Retener, "auditoria", *rutaAuditoria,
+		"decisiones_en_auditoria", auditoria.Indicadores().Total, "panel_con_token", clavePanel != "",
+		"avisos_ntfy", os.Getenv("NTFY_URL") != "", "limites_por_segundo",
+		map[string]int{"cliente": *porCliente, "ip": *porIP, "dispositivo": *porDispositivo})
 	ctx, parar := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer parar()
 	fin := make(chan error, 1)

@@ -6,7 +6,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"math"
 	"os"
 	"slices"
@@ -95,12 +95,13 @@ func Abrir(ctx context.Context, ruta string) (*Motor, error) {
 						vistas[nueva.Version] = h
 						m.actual.Store(&nueva)
 						ultimaHuella = h
-						log.Printf("reglas activas %s", nueva.Version)
+						slog.Info("reglas_recargadas", "version", nueva.Version, "reglas", len(nueva.Reglas),
+							"umbral_desafiar", nueva.Umbrales.Desafiar, "umbral_retener", nueva.Umbrales.Retener)
 					}
 				}
 				if err != nil {
 					if mensaje := err.Error(); mensaje != ultimoError {
-						log.Printf("se conservaron las reglas %s: %s", m.actual.Load().Version, mensaje)
+						slog.Warn("reglas_rechazadas", "conservadas", m.actual.Load().Version, "error", mensaje)
 						ultimoError = mensaje
 					}
 				} else {

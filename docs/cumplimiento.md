@@ -69,15 +69,17 @@ queda abierta para una demostración. Con Docker: `YUMA_USUARIOS_DOCKER=/app/acc
 
 ## Logs
 
+Todos los servicios escriben una línea JSON por evento, sin datos personales de los clientes: ni IP, ni huella del
+dispositivo, ni identificadores en claro (las referencias son el seudónimo HMAC recortado).
+
 | Log | Dónde | Qué registra |
 | --- | --- | --- |
-| Bitácora de seguridad de la consola | `datos/accesos.jsonl` (con `iniciar.sh`), salida estándar y panel «Bitácora de accesos» | Ingresos, intentos fallidos (con el factor que falló), bloqueos por intentos, accesos denegados por rol, resoluciones de casos y exportaciones de la auditoría. Cada línea lleva el SHA-256 de la anterior. Nunca guarda contraseñas ni códigos. |
-| aegix | Salida estándar, JSON (`log/slog`) | Arranque, cada decisión de la billetera (con la referencia HMAC recortada, nunca el identificador), cada resolución con su analista, exportaciones y `auditoria_alterada` si la verificación encuentra una ruptura. |
-| Centinela | Salida estándar y `datos/expedientes/ALERTA_*.json` | Expedientes escritos, cadena rota y oleadas. |
+| Bitácora de seguridad de la consola | `datos/accesos.jsonl` (con `iniciar.sh`), salida estándar y panel «Bitácora de accesos» (con descarga en JSON) | Ingresos (rol, permisos, vencimiento de la sesión), intentos fallidos con el factor que falló, bloqueos, sesiones vencidas o alteradas, accesos denegados (método, ruta y permiso), resoluciones (acción, estado final del caso y duración), exportaciones y descargas. Cada **operación de la billetera que cruza el túnel**: decisión, puntaje, razones, latencia de aegix y total, y si vino por el túnel. Cada evento lleva IP, navegador e identificador corto de la sesión del empleado. Cadena SHA-256 entre líneas; nunca guarda contraseñas ni códigos. |
+| aegix (`log/slog`) | Salida estándar | `aegix_iniciado` (reglas, umbrales, límites, protecciones activas); cada **decisión de la billetera** con nivel de riesgo, razones, operación (tipo, canal, monto, monto sobre saldo, tipo de destino, antigüedad), señales (dispositivo, destino, SIM, clave, departamento, Tor, proxy, país), versión de la app y contacto accesible; `rechazo` con el motivo; `contingencia` (tiempo agotado u origen caído); `resolucion` con el analista; `reglas_recargadas`; `auditoria_alterada`; y un `resumen_minuto` con totales, TPS, latencia p50/p99, cumplimiento del SLA y monto protegido. |
+| Centinela | Salida estándar y `datos/expedientes/ALERTA_*.json` | `verificacion` cada vez que cambia la auditoría (cadena, decisiones por tipo, retenidas, pendientes, fraudes confirmados, liberadas, PSI), expedientes escritos, cadena rota y oleadas. |
 | Auditoría de decisiones | `datos/decisiones.jsonl` | La evidencia sellada (arriba). |
 
 En Docker: `docker compose logs -f consola aegix centinela`. Cada servicio rota sus logs a los 10 MB (5 archivos).
-La bitácora de la consola solo la ven en pantalla los roles con permiso de auditoría (`GET /api/accesos`).
 
 ## Contenedores
 

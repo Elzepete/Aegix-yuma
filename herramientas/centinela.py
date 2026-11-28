@@ -222,13 +222,19 @@ def escribir_alerta(dir_salida: str, tipo: str, datos: dict) -> str:
     return ruta
 
 
+def log(evento: str, nivel: str = "INFO", **datos) -> None:
+    """Una línea JSON por evento, como aegix y la consola: la lee docker logs o cualquier recolector."""
+    print(json.dumps({"time": datetime.now(timezone.utc).isoformat(), "level": nivel, "servicio": "centinela",
+                      "msg": evento, **datos}, ensure_ascii=False), flush=True)
+
+
 # ---------------------------------------------------------------------------
 def ciclo(a, clave: bytes, memoria: dict) -> dict:
     lineas = leer_lineas(a.auditoria)
     cadena = verificar_cadena(lineas, clave)
     if not cadena["integra"] and memoria.get("cadena") != cadena["ultimo_hash"]:
         ruta = escribir_alerta(a.expedientes, "CADENA", cadena)
-        print(f"[ALERTA] cadena de custodia rota: {ruta}", flush=True)
+        log("cadena_rota", "ERROR", alerta=ruta, rupturas=cadena["rupturas"][:10], lineas=cadena["lineas"])
         avisar_ntfy("aegix · auditoría alterada", f"La cadena de la auditoría está rota en la línea {cadena['rupturas'][0]['linea']}.")
         memoria["cadena"] = cadena["ultimo_hash"]
 
@@ -252,15 +258,31 @@ def ciclo(a, clave: bytes, memoria: dict) -> dict:
         if escribir_si_cambia(os.path.join(a.expedientes, f"expediente-{ref[:16]}.md"), texto):
             nuevos += 1
     if nuevos:
-        print(f"[Forense] {nuevos} expediente(s) escritos o actualizados en {a.expedientes}", flush=True)
+        log("expedientes_escritos", cantidad=nuevos, carpeta=a.expedientes)
 
     oleada = evaluar_oleada([float(e.get("puntaje", 0)) for _, _, e in decisiones[-5000:]])
     if oleada["alerta"] and (oleada["estado"] != memoria.get("estado") or time.time() - memoria.get("alerta_en", 0) > 300):
         ruta = escribir_alerta(a.expedientes, "OLEADA", oleada)
-        print(f"[ALERTA SOC] {oleada['estado']} (PSI {oleada['psi']}): {ruta}", flush=True)
+        log("oleada", "WARNING", alerta=ruta, **{k: v for k, v in oleada.items() if k != "alerta"})
         avisar_ntfy("aegix · posible oleada de fraude", f"{oleada['estado']}: la mezcla de puntajes cambió (PSI {oleada['psi']}).")
         memoria["alerta_en"] = time.time()
     memoria["estado"] = oleada["estado"]
+
+    # Estado completo, solo cuando la auditoría cambió desde el último ciclo.
+    if memoria.get("lineas") != cadena["lineas"]:
+        retenidas = {e.get("referencia") for _, _, e in decisiones if e.get("decision") == "retener"}
+        conteo = {}
+        for _, _, e in decisiones:
+            conteo[e.get("decision") or "sin_decision"] = conteo.get(e.get("decision") or "sin_decision", 0) + 1
+        log("verificacion", "INFO" if cadena["integra"] else "ERROR",
+            cadena_integra=cadena["integra"], lineas=cadena["lineas"], selladas=cadena["selladas"],
+            previas_a_la_cadena=cadena["previas_a_la_cadena"], rupturas=len(cadena["rupturas"]),
+            ultimo_hash=cadena["ultimo_hash"][:16], decisiones=conteo,
+            retenidas=len(retenidas), pendientes=len(retenidas - set(resoluciones)),
+            fraudes_confirmados=sum(r.get("resolucion") == "confirmar_fraude" for r in resoluciones.values()),
+            liberadas=sum(r.get("resolucion") == "liberar" for r in resoluciones.values()),
+            oleada=oleada["estado"], psi=oleada.get("psi"))
+        memoria["lineas"] = cadena["lineas"]
     return {"cadena": cadena, "oleada": oleada}
 
 
@@ -283,7 +305,8 @@ def main() -> None:
         sys.exit(0 if r["integra"] else 1)
 
     os.makedirs(a.expedientes, exist_ok=True)
-    print(f"[Centinela] vigilando {a.auditoria}; expedientes y alertas en {a.expedientes}", flush=True)
+    log("centinela_iniciado", auditoria=a.auditoria, expedientes=a.expedientes, intervalo_s=a.intervalo,
+        avisos_ntfy=bool(os.environ.get("NTFY_URL")))
     memoria = {}
     while True:
         try:
@@ -294,7 +317,7 @@ def main() -> None:
                       f"{c['previas_a_la_cadena']} anteriores al sello). Oleadas: {o['estado']}.")
                 sys.exit(0 if c["integra"] else 1)
         except FileNotFoundError:
-            print("[Centinela] la auditoría aún no existe; reintento.", flush=True)
+            log("auditoria_no_encontrada", "WARNING", auditoria=a.auditoria)
             if a.una_vez:
                 sys.exit(1)
         time.sleep(a.intervalo)

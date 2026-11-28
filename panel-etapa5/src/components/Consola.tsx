@@ -327,13 +327,53 @@ export function Latencia({ cubetas, sla }: { cubetas?: Metricas['histograma_late
 
 type Verificacion = { integra: boolean; lineas: number; selladas: number; previas_a_la_cadena: number; rupturas: { linea: number; motivo: string }[] };
 
-type Acceso = { ts: string; evento: string; usuario?: string | null; rol?: string | null; ip?: string; motivo?: string; accion?: string; ruta?: string };
+type Acceso = {
+  ts: string; evento: string; usuario?: string | null; rol?: string | null; ip?: string; via_tunel?: boolean; navegador?: string;
+  sesion?: string | null; motivo?: string; accion?: string | null; ruta?: string; metodo?: string; permiso?: string;
+  decision?: string | null; puntaje?: number | null; razones?: string[]; latencia_aegix_ms?: number | null; duracion_ms?: number;
+  estado_http?: number; estado_caso?: string | null; error?: string | null; acceso?: string; vence?: string;
+};
 const EVENTO: Record<string, string> = {
   ingreso: 'Ingresó', salida: 'Salió', ingreso_fallido: 'Ingreso fallido', ingreso_bloqueado: 'Ingreso bloqueado',
   acceso_denegado: 'Acceso denegado', resolucion: 'Resolvió un caso', auditoria_exportada: 'Exportó la auditoría',
-  consola_iniciada: 'Consola iniciada',
+  consola_iniciada: 'Consola iniciada', billetera_autorizar: 'Operación de la billetera', billetera_sin_aegix: 'Billetera sin aegix',
+  sesion_invalida: 'Sesión vencida o alterada', bitacora_descargada: 'Descargó la bitácora',
 };
-const ALERTA_ACCESO = new Set(['ingreso_fallido', 'ingreso_bloqueado', 'acceso_denegado']);
+const ALERTA_ACCESO = new Set(['ingreso_fallido', 'ingreso_bloqueado', 'acceso_denegado', 'billetera_sin_aegix', 'sesion_invalida']);
+const atencion = (a: Acceso) => ALERTA_ACCESO.has(a.evento) || (a.evento === 'billetera_autorizar' && (a.decision === 'retener' || a.decision === 'rechazar'));
+const navegador = (ua = '') => (/Firefox\//.test(ua) ? 'Firefox' : /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome'
+  : /Safari\//.test(ua) ? 'Safari' : /curl/.test(ua) ? 'curl' : /node/i.test(ua) ? 'Node' : ua ? 'otro' : '');
+const ms = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 });
+
+// Una línea con quién, qué y desde dónde; la segunda con el detalle propio de cada evento.
+function detalleAcceso(a: Acceso): string {
+  const partes: string[] = [];
+  if (a.evento === 'billetera_autorizar') {
+    partes.push(`${a.decision ?? `HTTP ${a.estado_http}`}${a.puntaje != null ? `, puntaje ${decimal.format(a.puntaje)}` : ''}`);
+    if (a.latencia_aegix_ms != null) partes.push(`aegix ${ms.format(a.latencia_aegix_ms)} ms`);
+    if (a.duracion_ms != null) partes.push(`total ${ms.format(a.duracion_ms)} ms`);
+    if (a.razones?.length) partes.push(a.razones.slice(0, 2).join('; '));
+  }
+  if (a.evento === 'resolucion') partes.push(`${a.accion?.replace('_', ' ') ?? ''} → ${a.estado_caso ?? a.error ?? `HTTP ${a.estado_http}`}`, `${ms.format(a.duracion_ms ?? 0)} ms`);
+  if (a.evento === 'acceso_denegado') partes.push(`${a.metodo ?? ''} ${a.ruta ?? ''} sin permiso «${a.permiso ?? ''}»`);
+  if (a.motivo) partes.push(a.motivo);
+  if (a.acceso) partes.push(`acceso ${a.acceso}`);
+  if (a.ip) partes.push(`${a.via_tunel ? 'por el túnel desde ' : ''}${a.ip}`);
+  if (a.navegador) partes.push(navegador(a.navegador));
+  if (a.sesion) partes.push(`sesión ${a.sesion}`);
+  return partes.filter(Boolean).join(' · ');
+}
+
+function FilaAcceso({ a }: { a: Acceso }) {
+  return (
+    <li className={atencion(a) ? 'alerta' : undefined}>
+      <span className="mono">{hora.format(new Date(a.ts))}</span>{' '}
+      <b>{EVENTO[a.evento] ?? a.evento}</b>
+      {a.usuario ? ` · ${a.usuario}${a.rol ? ` (${a.rol})` : ''}` : ''}
+      <span className="detalle-acceso">{detalleAcceso(a)}</span>
+    </li>
+  );
+}
 const hora = new Intl.DateTimeFormat('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'America/Bogota' });
 
 // Auditoría inmutable y marco normativo: verifica la cadena SHA-256 + HMAC y lee la bitácora de accesos cada 15 s.
@@ -349,7 +389,7 @@ export function Cumplimiento() {
         .then((d: Verificacion) => { if (vivo) { setV(d); setError(''); } }, (e: Error) => { if (vivo) setError(e.message); });
       fetch('/api/accesos', { cache: 'no-store' })
         .then((r) => (r.ok ? r.json() : []))
-        .then((d: Acceso[]) => { if (vivo) setAccesos(d.slice(0, 8)); }, () => {});
+        .then((d: Acceso[]) => { if (vivo) setAccesos(d); }, () => {});
     };
     consultar();
     const id = setInterval(consultar, 15000);
@@ -369,16 +409,20 @@ export function Cumplimiento() {
       <p><a className="boton" href="/api/auditoria/exportar" download="auditoria-aegix.json">Exportar auditoría (JSON)</a></p>
       <h4>Bitácora de accesos</h4>
       {accesos.length ? (
-        <ol className="accesos">
-          {accesos.map((a, i) => (
-            <li key={`${a.ts}-${i}`} className={ALERTA_ACCESO.has(a.evento) ? 'alerta' : undefined}>
-              <span className="mono">{hora.format(new Date(a.ts))}</span>{' '}
-              <b>{EVENTO[a.evento] ?? a.evento}</b>
-              {a.usuario ? ` · ${a.usuario}${a.rol ? ` (${a.rol})` : ''}` : ''}
-              {a.motivo ? ` · ${a.motivo}` : ''}{a.accion ? ` · ${a.accion.replace('_', ' ')}` : ''}
-            </li>
-          ))}
-        </ol>
+        <>
+          <p className="resumen-accesos">
+            {entero.format(accesos.length)} eventos recientes · {entero.format(accesos.filter(atencion).length)} de atención ·{' '}
+            {entero.format(accesos.filter((a) => a.evento === 'billetera_autorizar').length)} operaciones de la billetera
+          </p>
+          <ol className="accesos">{accesos.slice(0, 10).map((a, i) => <FilaAcceso key={`${a.ts}-${i}`} a={a} />)}</ol>
+          {accesos.length > 10 && (
+            <details className="todos-accesos">
+              <summary>Ver los {entero.format(accesos.length)} eventos</summary>
+              <ol className="accesos">{accesos.slice(10).map((a, i) => <FilaAcceso key={`${a.ts}-t${i}`} a={a} />)}</ol>
+            </details>
+          )}
+          <p><a className="boton" href="/api/accesos?descargar=1" download="bitacora-consola-aegix.json">Descargar bitácora (JSON)</a></p>
+        </>
       ) : <p>Sin eventos todavía.</p>}
       <ul className="normativa">
         <li><b>Ley 1581 de 2012:</b> sin nombres ni celulares en claro; los identificadores son seudónimos HMAC y la accesibilidad no entra al puntaje.</li>
