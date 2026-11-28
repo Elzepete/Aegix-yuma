@@ -38,6 +38,14 @@ if [[ $tunel == 1 && ( -z "${YUMA_PANEL_TOKEN:-}" || ( $sin_clave == 0 && -z "${
   exit 1
 fi
 
+# Una sola copia a la vez: una segunda archivaría la auditoría que la primera sigue escribiendo.
+for puerto in 8081 4173; do
+  if (exec 3<>"/dev/tcp/127.0.0.1/$puerto") 2>/dev/null; then
+    echo "Ya hay algo escuchando en el puerto $puerto: aegix o la consola ya están corriendo. Detén esa copia (Ctrl+C en su terminal) antes de arrancar otra." >&2
+    exit 1
+  fi
+done
+
 if [[ $limpia == 1 && -s $auditoria ]]; then
   # Se archiva, nunca se borra: es la evidencia de las decisiones. La clave HMAC se conserva para poder verificarla.
   destino="datos/archivo/decisiones-$(date +%Y%m%d-%H%M%S).jsonl"
