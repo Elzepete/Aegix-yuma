@@ -29,7 +29,16 @@ RUN npm run build
 FROM node:20-alpine AS consola
 WORKDIR /app
 COPY --from=consola-build /src/dist ./dist
-COPY panel-etapa5/package.json panel-etapa5/proxy.mjs panel-etapa5/transacciones-prueba.mjs ./
+COPY panel-etapa5/package.json panel-etapa5/proxy.mjs panel-etapa5/acceso.mjs panel-etapa5/usuarios.mjs panel-etapa5/transacciones-prueba.mjs ./
 USER node
 ENV YUMA_PANEL_HOST=0.0.0.0
 CMD ["node", "proxy.mjs"]
+
+# Centinela: verifica la cadena de la auditoría, escribe expedientes y vigila oleadas. Solo biblioteca estándar.
+FROM python:3.12-alpine AS centinela
+# Mismo uid que aegix para leer la clave HMAC; la auditoría se monta en solo lectura.
+RUN adduser -D -u 10001 centinela && mkdir -p /app/expedientes && chown centinela /app/expedientes
+WORKDIR /app
+COPY herramientas/centinela.py ./
+USER centinela
+ENTRYPOINT ["python3", "-I", "centinela.py", "--auditoria", "/app/datos/decisiones.jsonl", "--expedientes", "/app/expedientes"]

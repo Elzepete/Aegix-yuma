@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/netip"
+	"regexp"
 	"strings"
 	"time"
 
@@ -38,6 +39,8 @@ type Config struct {
 }
 
 const tiempoEvaluacion = 250 * time.Millisecond
+
+var analistaValido = regexp.MustCompile(`^[a-z0-9._-]{1,32} \((admin|analista|auditor|empleado)\)$`)
 
 type conteos struct {
 	Confirmadas uint64  `json:"decisiones_confirmadas"`
@@ -118,7 +121,12 @@ func Nuevo(cliente *sandbox.Cliente, cfg Config) http.Handler {
 				return
 			}
 			ref := r.PathValue("ref")
-			err := cfg.Registro.Resolver(ref, cuerpo.Resolucion, time.Now().UTC())
+			// La consola dice quién resolvió; solo ella llega aquí, con el token del panel.
+			analista := r.Header.Get("X-Aegix-Analista")
+			if !analistaValido.MatchString(analista) {
+				analista = ""
+			}
+			err := cfg.Registro.Resolver(ref, cuerpo.Resolucion, analista, time.Now().UTC())
 			switch {
 			case errors.Is(err, registro.ErrCasoNoEncontrado):
 				responder(w, http.StatusNotFound, map[string]string{"error": err.Error()})
@@ -131,6 +139,32 @@ func Nuevo(cliente *sandbox.Cliente, cfg Config) http.Handler {
 			default:
 				cfg.Avisos.Resolucion(cuerpo.Resolucion)
 				responder(w, http.StatusOK, map[string]string{"estado": cfg.Registro.Estado(ref)})
+			}
+		})
+		mux.HandleFunc("GET /auditoria/verificar", func(w http.ResponseWriter, r *http.Request) {
+			if !proteger(w, r) {
+				return
+			}
+			v, err := cfg.Registro.Verificar()
+			if err != nil {
+				responder(w, http.StatusInternalServerError, map[string]string{"error": "no se pudo leer la auditoría"})
+				return
+			}
+			responder(w, http.StatusOK, v)
+		})
+		mux.HandleFunc("GET /auditoria/exportar", func(w http.ResponseWriter, r *http.Request) {
+			if !proteger(w, r) {
+				return
+			}
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.Header().Set("Content-Disposition", `attachment; filename="auditoria-aegix.json"`)
+			w.Header().Set("Cache-Control", "no-store")
+			version := ""
+			if cfg.Motor != nil {
+				version = cfg.Motor.Instantanea().Version
+			}
+			if err := cfg.Registro.Exportar(w, version); err != nil {
+				log.Printf("exportar auditoría: %v", err)
 			}
 		})
 		// La billetera consulta con su propio identificador; aegix lo convierte a la referencia HMAC.

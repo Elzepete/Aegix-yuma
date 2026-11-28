@@ -26,7 +26,7 @@ jobs:
         working-directory: panel-etapa5
         run: npm ci && npm run lint && npm run build && npm test
       - name: Herramientas
-        run: python3 herramientas/etiquetas_analista.py && bash -n herramientas/iniciar.sh
+        run: python3 herramientas/etiquetas_analista.py && bash -n herramientas/iniciar.sh && python3 -m unittest herramientas/test_centinela.py
 
   docker:
     runs-on: ubuntu-latest
@@ -49,6 +49,12 @@ jobs:
       - name: Recorrido en un navegador real (Playwright)
         working-directory: pruebas-e2e
         run: npm ci && npx playwright install --with-deps chromium && npm test
+      - name: Auditoría sellada y centinela
+        run: |
+          curl -fsS http://127.0.0.1:4173/api/auditoria/verificar | grep -q '"integra":true'
+          curl -fsS http://127.0.0.1:4173/api/auditoria/exportar | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["verificacion"]["integra"] and d["eventos"]'
+          docker compose exec -T centinela python3 -I centinela.py --una-vez --auditoria /app/datos/decisiones.jsonl --expedientes /app/expedientes
+          docker compose exec -T centinela sh -c 'ls /app/expedientes/expediente-*.md'
       - name: Registros si algo falla
         if: failure()
         run: docker compose logs

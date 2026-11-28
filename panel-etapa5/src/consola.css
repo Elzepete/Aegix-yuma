@@ -180,3 +180,9 @@ html[data-texto-grande] body { zoom: 1.2; }
 html[data-contraste] { --suave: var(--texto); --tenue: var(--texto); --linea: color-mix(in srgb, var(--texto) 40%, transparent); --linea-fuerte: color-mix(in srgb, var(--texto) 55%, transparent); }
 html[data-contraste] .etiqueta, html[data-contraste] .panel { border: 1px solid var(--linea-fuerte); }
 html[data-sin-movimiento] *, html[data-sin-movimiento] *::before, html[data-sin-movimiento] *::after { animation: none !important; transition: none !important; }
+
+/* Auditoría y cumplimiento */
+.cumplimiento a.boton { display: inline-block; text-decoration: none; color: inherit; }
+.cumplimiento .normativa { margin: 0; padding-left: 18px; font-size: 12.5px; display: grid; gap: 6px; }
+.sesion { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
+.sesion a { color: inherit; }

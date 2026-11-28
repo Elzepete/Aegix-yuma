@@ -39,4 +39,5 @@ export interface Alerta {
   confirmada_por_sandbox: boolean;
   resolucion?: 'liberar' | 'confirmar_fraude';
   resuelta_en?: string;
+  analista?: string;
 }

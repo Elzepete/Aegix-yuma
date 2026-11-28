@@ -29,16 +29,16 @@ func TestResolucionDelAnalistaPersiste(t *testing.T) {
 	ref := r.Referencia("YW1")
 	esperar(t, func() bool { return r.Estado(ref) == "en_revision" })
 
-	if err := r.Resolver(r.Referencia("YW2"), "liberar", time.Now()); !errors.Is(err, ErrCasoNoEncontrado) {
+	if err := r.Resolver(r.Referencia("YW2"), "liberar", "", time.Now()); !errors.Is(err, ErrCasoNoEncontrado) {
 		t.Fatalf("un desafío no se resuelve desde el panel: %v", err)
 	}
-	if err := r.Resolver(ref, "aprobar", time.Now()); err == nil {
+	if err := r.Resolver(ref, "aprobar", "", time.Now()); err == nil {
 		t.Fatal("se esperaba error por resolución inválida")
 	}
-	if err := r.Resolver(ref, "confirmar_fraude", time.Now()); err != nil {
+	if err := r.Resolver(ref, "confirmar_fraude", "", time.Now()); err != nil {
 		t.Fatal(err)
 	}
-	if err := r.Resolver(ref, "liberar", time.Now()); !errors.Is(err, ErrYaResuelto) {
+	if err := r.Resolver(ref, "liberar", "", time.Now()); !errors.Is(err, ErrYaResuelto) {
 		t.Fatalf("se esperaba ErrYaResuelto, se obtuvo %v", err)
 	}
 	if r.Estado(ref) != "fraude_confirmado" || r.Indicadores().FraudesConfirmados != 1 {

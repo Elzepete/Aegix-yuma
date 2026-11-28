@@ -47,6 +47,11 @@ type Evento struct {
 	// "liberar" (falso positivo, la plata sale) o "confirmar_fraude" (la operación queda bloqueada).
 	Resolucion string     `json:"resolucion,omitempty"`
 	ResueltaEn *time.Time `json:"resuelta_en,omitempty"`
+	// Analista que resolvió (usuario de la consola con su rol); vacío si la consola no exige ingreso.
+	Analista string `json:"analista,omitempty"`
+	// HashAnterior encadena la auditoría: SHA-256 de la línea anterior tal como quedó escrita.
+	// Cada línea termina además en "sello", un HMAC-SHA256 de la línea (ver cadena.go).
+	HashAnterior string `json:"hash_anterior,omitempty"`
 }
 
 var (
@@ -56,8 +61,9 @@ var (
 )
 
 type resolucion struct {
-	accion string
-	fecha  time.Time
+	accion   string
+	fecha    time.Time
+	analista string
 }
 
 type Indicadores struct {
@@ -89,6 +95,7 @@ type Registro struct {
 	omitidas     atomic.Uint64
 	clave        []byte
 	ruta         string
+	anterior     string // hash de la última línea escrita; solo lo usan Abrir y el escritor
 }
 
 func Abrir(ruta, clave string) (*Registro, error) {
@@ -126,20 +133,27 @@ func Abrir(ruta, clave string) (*Registro, error) {
 			return nil, fmt.Errorf("registro de auditoría inválido: %w", err)
 		}
 		r.agregar(e)
+		r.anterior = resumen(s.Bytes())
 	}
 	if err := s.Err(); err != nil {
 		f.Close()
 		return nil, err
 	}
+	sello := r.claveSello()
 	go func() {
 		defer close(r.terminado)
 		defer f.Close()
-		w := json.NewEncoder(f)
 		for e := range r.pendientes {
-			if err := w.Encode(e); err != nil {
+			e.HashAnterior = r.anterior
+			linea, err := sellar(sello, e)
+			if err == nil {
+				_, err = f.Write(append(linea, '\n')) // una sola escritura por línea
+			}
+			if err != nil {
 				r.omitidas.Add(1)
 				continue
 			}
+			r.anterior = resumen(linea)
 			r.agregar(e)
 		}
 	}()
@@ -219,11 +233,11 @@ func (r *Registro) Guardar(e Evento) {
 
 // Resolver registra la decisión del analista sobre una retención. Se aplica en memoria y se escribe
 // en la auditoría; si la auditoría no la acepta, se deshace, porque una resolución sin rastro no vale.
-func (r *Registro) Resolver(ref, accion string, ahora time.Time) error {
+func (r *Registro) Resolver(ref, accion, analista string, ahora time.Time) error {
 	if accion != "liberar" && accion != "confirmar_fraude" {
 		return fmt.Errorf("resolución inválida: use liberar o confirmar_fraude")
 	}
-	e := Evento{ID: ref, Resolucion: accion, Fecha: ahora}
+	e := Evento{ID: ref, Resolucion: accion, Fecha: ahora, Analista: analista}
 	r.mu.Lock()
 	if _, ok := r.retenidas[ref]; !ok {
 		r.mu.Unlock()
@@ -249,7 +263,7 @@ func (r *Registro) Resolver(ref, accion string, ahora time.Time) error {
 // aplicarResolucion requiere r.mu; signo -1 deshace una resolución que no llegó a la auditoría.
 func (r *Registro) aplicarResolucion(e Evento, signo int) {
 	if signo > 0 {
-		r.resoluciones[e.ID] = resolucion{accion: e.Resolucion, fecha: e.Fecha}
+		r.resoluciones[e.ID] = resolucion{accion: e.Resolucion, fecha: e.Fecha, analista: e.Analista}
 	} else {
 		delete(r.resoluciones, e.ID)
 	}
@@ -330,7 +344,7 @@ func (r *Registro) conResolucion(eventos []Evento) []Evento {
 	for i := range lista {
 		if res, ok := r.resoluciones[lista[i].ID]; ok {
 			fecha := res.fecha
-			lista[i].Resolucion, lista[i].ResueltaEn = res.accion, &fecha
+			lista[i].Resolucion, lista[i].ResueltaEn, lista[i].Analista = res.accion, &fecha, res.analista
 		}
 	}
 	return lista

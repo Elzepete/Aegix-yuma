@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Alerta, Indicadores } from './tipos';
-import { Cola, Latencia, Mezcla, Pulso, Revision, Senales, type Metricas } from './components/Consola';
+import { Cola, Cumplimiento, Latencia, Mezcla, Pulso, Revision, Senales, type Metricas } from './components/Consola';
 import { PruebaTransacciones } from './components/PruebaTransacciones';
 import { alCambiarVoces, estadoVoz, hablar } from './voz';
 
@@ -132,6 +132,9 @@ export default function App() {
   }, [fuente, origen, orden, soloAccesible]);
 
   const pendientes = (alertas ?? []).filter((a) => a.decision === 'retener' && !a.resolucion).length;
+  // Quién ingresó y qué puede hacer; sin acceso SOC configurado, la consola es abierta y puede todo.
+  const { datos: sesion } = useDatosGo<{ usuario: string | null; rol: string | null; permisos: string[] }>('/api/sesion', 0);
+  const puede = (permiso: string) => !sesion || sesion.permisos.includes(permiso);
   const sinConexion = !!(error && errorMetricas);
 
   // El lector de pantalla oye solo lo que importa: casos nuevos por resolver y la pérdida de conexión, no el reloj.
@@ -158,6 +161,9 @@ export default function App() {
           <b>aegix</b><span>Decisiones de Yuma Pay</span>
         </div>
         <div className="cabecera-der">
+          {sesion?.usuario && (
+            <span className="sesion"><span className="etiqueta">{sesion.usuario} · {sesion.rol}</span><a href="/salir">Salir</a></span>
+          )}
           <span className="etiqueta estado-sistema" style={{ ['--c' as string]: estadoColor }}>{estadoTexto}</span>
           {alertas?.[0] && <span className="etiqueta mono">{alertas[0].version_reglas}</span>}
           <span className={`actualizado${atrasado || errorMetricas ? ' atrasado' : ''}`}>
@@ -208,10 +214,11 @@ export default function App() {
                 </div>
               </div>
             </div>
-            {fuente ? <Cola alertas={visibles} ahora={Date.now()} nuevas={nuevas} alResolver={() => setRevision((v) => v + 1)} /> : <p className="vacio" role="status">Cargando casos…</p>}
+            {fuente ? <Cola alertas={visibles} ahora={Date.now()} nuevas={nuevas} alResolver={() => setRevision((v) => v + 1)} puedeResolver={puede('resolver')} /> : <p className="vacio" role="status">Cargando casos…</p>}
           </section>
 
           <aside className="costado" aria-label="Contexto">
+            {puede('auditar') && <Cumplimiento />}
             <Revision ind={indicadores} pendientes={pendientes} accesibles={(alertas ?? []).filter((a) => a.decision === 'retener' && !a.resolucion && a.entrada?.accesibilidad).length} />
             <Mezcla porOrigen={metricas?.decisiones_por_origen} />
             <Senales modalidades={metricas?.modalidades_detectadas} />
@@ -219,7 +226,7 @@ export default function App() {
           </aside>
         </div>
 
-        <PruebaTransacciones alTerminar={() => setRevision((v) => v + 1)} />
+        {puede('probar') && <PruebaTransacciones alTerminar={() => setRevision((v) => v + 1)} />}
       </main>
     </>
   );

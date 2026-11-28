@@ -1,18 +1,31 @@
 # Todo Escudo Yuma con un comando:  docker compose up --build
 #   consola  http://127.0.0.1:4173
 #   billetera http://127.0.0.1:3000
-# Los tres servicios comparten la red de «aegix»: se hablan por 127.0.0.1 y aegix (:8081) no se publica.
+# aegix, consola y billetera comparten la red de «aegix»: se hablan por 127.0.0.1 y aegix (:8081) no se publica.
+# El centinela lee la auditoría en solo lectura y escribe expedientes y alertas en su propio volumen.
+# Todos corren sin privilegios: usuario sin root, sistema de archivos de solo lectura y sin capacidades de Linux.
+#
 # Variables opcionales: YUMA_PANEL_TOKEN, YUMA_PANEL_CLAVE, YUMA_AUDIT_KEY, NTFY_URL (ver docs/despliegue.md).
+# Acceso 2FA a la consola: crea usuarios en datos/acceso/usuarios.json (docs/cumplimiento.md) y arranca con
+#   YUMA_USUARIOS_DOCKER=/app/acceso/usuarios.json docker compose up --build
+
+x-endurecido: &endurecido
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs: ["/tmp:size=16m"]
+  restart: unless-stopped
 
 services:
   aegix:
+    <<: *endurecido
     build: { context: ., target: aegix }
     environment:
       YUMA_PANEL_TOKEN: ${YUMA_PANEL_TOKEN:-}
       YUMA_AUDIT_KEY: ${YUMA_AUDIT_KEY:-}
       NTFY_URL: ${NTFY_URL:-}       # avisos al celular (opcional)
     volumes:
-      - datos:/app/datos            # auditoría y clave HMAC: sobreviven a docker compose down
+      - datos:/app/datos            # auditoría sellada y clave HMAC: sobreviven a docker compose down
     ports:
       - "127.0.0.1:4173:4173"       # consola
       - "127.0.0.1:3000:3000"       # billetera
@@ -23,16 +36,22 @@ services:
       retries: 20
 
   consola:
+    <<: *endurecido
     build: { context: ., target: consola }
     network_mode: service:aegix
     environment:
       YUMA_PANEL_TOKEN: ${YUMA_PANEL_TOKEN:-}
       YUMA_PANEL_CLAVE: ${YUMA_PANEL_CLAVE:-}
+      YUMA_USUARIOS: ${YUMA_USUARIOS_DOCKER:-}   # acceso SOC: contraseña scrypt + código TOTP
+    volumes:
+      - ./datos/acceso:/app/acceso:ro
     depends_on:
       aegix: { condition: service_healthy }
 
   billetera:
+    <<: *endurecido
     image: node:20-alpine
+    user: node
     working_dir: /app
     volumes:
       - ./yuma-billetera:/app:ro
@@ -46,5 +65,18 @@ services:
     depends_on:
       aegix: { condition: service_healthy }
 
+  centinela:
+    <<: *endurecido
+    build: { context: ., target: centinela }   # mismo uid que aegix: lee la clave, no puede escribir la auditoría
+    environment:
+      YUMA_AUDIT_KEY: ${YUMA_AUDIT_KEY:-}
+      NTFY_URL: ${NTFY_URL:-}       # alertas de oleada o de auditoría alterada al celular (opcional)
+    volumes:
+      - datos:/app/datos:ro
+      - expedientes:/app/expedientes
+    depends_on:
+      aegix: { condition: service_healthy }
+
 volumes:
   datos:
+  expedientes:

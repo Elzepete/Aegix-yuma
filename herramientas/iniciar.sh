@@ -13,6 +13,10 @@
 #   CLOUDFLARE_TUNEL   nombre de un túnel con nombre de Cloudflare (requiere dominio propio).
 #   Sin ninguno de los dos, se usa un túnel rápido de Cloudflare (dirección distinta en cada arranque).
 #   NTFY_URL           opcional: tema de ntfy (https://ntfy.sh/tu-tema) para recibir en el celular los avisos de aegix.
+#   YUMA_USUARIOS      acceso SOC 2FA a la consola (contraseña scrypt + TOTP). Si existe datos/acceso/usuarios.json
+#                      se usa solo; créalo con: node panel-etapa5/usuarios.mjs agregar <usuario> <rol> datos/acceso/usuarios.json
+#
+# Además arranca el centinela (herramientas/centinela.py): cadena de custodia, expedientes y alertas de oleada.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -30,11 +34,14 @@ mkdir -p datos/archivo bin
 auditoria=datos/decisiones.jsonl
 
 if [[ $sin_clave == 1 ]]; then
-  unset YUMA_PANEL_CLAVE
+  unset YUMA_PANEL_CLAVE YUMA_USUARIOS
   echo "Aviso: la consola queda sin contraseña; quien tenga la dirección del túnel puede ver y resolver casos." >&2
+elif [[ -z "${YUMA_USUARIOS:-}" && -s datos/acceso/usuarios.json ]]; then
+  export YUMA_USUARIOS=datos/acceso/usuarios.json
 fi
-if [[ $tunel == 1 && ( -z "${YUMA_PANEL_TOKEN:-}" || ( $sin_clave == 0 && -z "${YUMA_PANEL_CLAVE:-}" ) ) ]]; then
-  echo "Con --tunel define YUMA_PANEL_TOKEN y YUMA_PANEL_CLAVE (o usa --sin-clave): sin ellas cualquiera podría liberar operaciones." >&2
+if [[ -n "${YUMA_USUARIOS:-}" ]]; then echo "Consola con acceso SOC: usuario, contraseña y código TOTP ($YUMA_USUARIOS)."; fi
+if [[ $tunel == 1 && ( -z "${YUMA_PANEL_TOKEN:-}" || ( $sin_clave == 0 && -z "${YUMA_PANEL_CLAVE:-}${YUMA_USUARIOS:-}" ) ) ]]; then
+  echo "Con --tunel define YUMA_PANEL_TOKEN y YUMA_USUARIOS o YUMA_PANEL_CLAVE (o usa --sin-clave): sin ellas cualquiera podría liberar operaciones." >&2
   exit 1
 fi
 
@@ -63,8 +70,10 @@ trap terminar EXIT INT TERM
 bin/intermediario -auditoria "$auditoria" & pids+=($!)
 node panel-etapa5/proxy.mjs & pids+=($!)
 sleep 1
-echo "aegix:   http://127.0.0.1:8081/salud"
-echo "consola: http://127.0.0.1:4173"
+python3 herramientas/centinela.py --auditoria "$auditoria" --expedientes datos/expedientes & pids+=($!)
+echo "aegix:     http://127.0.0.1:8081/salud"
+echo "consola:   http://127.0.0.1:4173"
+echo "centinela: expedientes y alertas en datos/expedientes/"
 
 if [[ $tunel == 1 ]]; then
   ngrok=$(command -v ngrok || echo bin/ngrok) # también sirve el binario descargado en bin/

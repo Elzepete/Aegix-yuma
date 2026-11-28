@@ -111,7 +111,7 @@ function Dial({ puntaje, color, fuerte }: { puntaje: number; color: string; fuer
   );
 }
 
-export function Cola({ alertas, ahora, nuevas, alResolver }: { alertas: Alerta[]; ahora: number; nuevas: Set<string>; alResolver: () => void }) {
+export function Cola({ alertas, ahora, nuevas, alResolver, puedeResolver = true }: { alertas: Alerta[]; ahora: number; nuevas: Set<string>; alResolver: () => void; puedeResolver?: boolean }) {
   const [abierto, setAbierto] = useState<string | null>(null);
   const [confirmando, setConfirmando] = useState<Accion | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -198,8 +198,10 @@ export function Cola({ alertas, ahora, nuevas, alResolver }: { alertas: Alerta[]
                   {a.origen !== 'billetera' && <><dt>Sandbox</dt><dd>{a.confirmada_por_sandbox ? 'Confirmó la decisión' : 'No confirmó la decisión'}</dd></>}
                   {a.referencia && <><dt>Referencia</dt><dd className="mono">{a.referencia}</dd></>}
                   {resuelta && a.resuelta_en && <><dt>Resuelta</dt><dd>{resuelta[0]}, {fechaLarga.format(new Date(a.resuelta_en))}</dd></>}
+                  {resuelta && a.analista && <><dt>Resuelta por</dt><dd>{a.analista}</dd></>}
                 </dl>
-                {resoluble && (
+                {resoluble && !puedeResolver && <p className="nota-accion">Tu rol puede ver este caso, pero solo un analista o un administrador lo resuelve.</p>}
+                {resoluble && puedeResolver && (
                   <div className="acciones-caso">
                     {!confirmando ? (
                       <>
@@ -319,6 +321,42 @@ export function Latencia({ cubetas, sla }: { cubetas?: Metricas['histograma_late
         {cubetas.map((c, i) => <text key={i} x={x0 + i * ancho + ancho / 2} y="118" textAnchor="middle">{etiqueta(c.hasta_ms)}</text>)}
       </svg>
       <p>Decisiones por tramo de milisegundos. A la derecha de la línea punteada queda lo que supera el SLA de {sla} ms.</p>
+    </section>
+  );
+}
+
+type Verificacion = { integra: boolean; lineas: number; selladas: number; previas_a_la_cadena: number; rupturas: { linea: number; motivo: string }[] };
+
+// Auditoría inmutable y marco normativo: verifica la cadena SHA-256 + HMAC cada 15 s.
+export function Cumplimiento() {
+  const [v, setV] = useState<Verificacion | null>(null);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let vivo = true;
+    const consultar = () => fetch('/api/auditoria/verificar', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((d: Verificacion) => { if (vivo) { setV(d); setError(''); } }, (e: Error) => { if (vivo) setError(e.message); });
+    consultar();
+    const id = setInterval(consultar, 15000);
+    return () => { vivo = false; clearInterval(id); };
+  }, []);
+  return (
+    <section className="panel cumplimiento" aria-labelledby="t-cumplimiento">
+      <h3 id="t-cumplimiento">Auditoría y cumplimiento</h3>
+      {error ? <p className="error-accion" role="alert">No se pudo verificar la auditoría ({error}).</p>
+        : !v ? <p>Verificando la cadena…</p>
+        : v.integra ? (
+          <p role="status"><b style={{ color: 'var(--ok)' }}>Cadena íntegra.</b> {entero.format(v.selladas)} decisiones selladas con SHA-256 + HMAC
+            {v.previas_a_la_cadena > 0 && <>, {entero.format(v.previas_a_la_cadena)} anteriores al sello</>}.</p>
+        ) : (
+          <p role="alert"><b style={{ color: 'var(--retener)' }}>Cadena rota.</b> Línea {v.rupturas[0]?.linea}: {v.rupturas[0]?.motivo}.</p>
+        )}
+      <p><a className="boton" href="/api/auditoria/exportar" download="auditoria-aegix.json">Exportar auditoría (JSON)</a></p>
+      <ul className="normativa">
+        <li><b>Ley 1581 de 2012:</b> sin nombres ni celulares en claro; los identificadores son seudónimos HMAC y la accesibilidad no entra al puntaje.</li>
+        <li><b>SARLAFT:</b> toda retención la resuelve una persona y queda registrado quién.</li>
+        <li><b>PCI DSS:</b> fuera de alcance; aegix no recibe números de tarjeta.</li>
+      </ul>
     </section>
   );
 }
