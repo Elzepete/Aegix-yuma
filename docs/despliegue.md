@@ -83,6 +83,9 @@ env (grep -v '^#' .env.despliegue) herramientas/iniciar.sh --tunel --demo-limpia
 set -a; source .env.despliegue; set +a; herramientas/iniciar.sh --tunel --demo-limpia   # bash o zsh
 ```
 
+Para una demostración sin contraseña en la consola, agrega `--sin-clave`. La billetera sigue protegida por el
+token de aegix, pero cualquiera con la dirección del túnel puede ver la consola y resolver casos.
+
 O define las variables a mano:
 
 ```bash

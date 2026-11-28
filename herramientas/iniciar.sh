@@ -4,10 +4,11 @@
 #   herramientas/iniciar.sh                 # local: aegix :8081 y consola :4173
 #   herramientas/iniciar.sh --demo-limpia   # archiva la auditoría actual y empieza en cero
 #   herramientas/iniciar.sh --tunel         # además publica la consola (y la API de la billetera) por un túnel
+#   herramientas/iniciar.sh --tunel --sin-clave   # consola pública sin contraseña (solo para una demostración)
 #
 # Variables:
 #   YUMA_PANEL_TOKEN   clave entre la billetera (Vercel, AEGIX_TOKEN) y aegix. Obligatoria con --tunel.
-#   YUMA_PANEL_CLAVE   contraseña de la consola en el navegador. Obligatoria con --tunel.
+#   YUMA_PANEL_CLAVE   contraseña de la consola en el navegador. Obligatoria con --tunel, salvo con --sin-clave.
 #   NGROK_DOMINIO      dominio fijo gratuito de ngrok (p. ej. aegix-demo.ngrok-free.app); o bien
 #   CLOUDFLARE_TUNEL   nombre de un túnel con nombre de Cloudflare (requiere dominio propio).
 #   Sin ninguno de los dos, se usa un túnel rápido de Cloudflare (dirección distinta en cada arranque).
@@ -15,11 +16,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-limpia=0; tunel=0
+limpia=0; tunel=0; sin_clave=0
 for a in "$@"; do
   case "$a" in
     --demo-limpia) limpia=1 ;;
     --tunel) tunel=1 ;;
+    --sin-clave) sin_clave=1 ;;
     *) echo "opción desconocida: $a" >&2; exit 2 ;;
   esac
 done
@@ -27,8 +29,12 @@ done
 mkdir -p datos/archivo bin
 auditoria=datos/decisiones.jsonl
 
-if [[ $tunel == 1 && ( -z "${YUMA_PANEL_TOKEN:-}" || -z "${YUMA_PANEL_CLAVE:-}" ) ]]; then
-  echo "Con --tunel define YUMA_PANEL_TOKEN y YUMA_PANEL_CLAVE: sin ellas cualquiera podría liberar operaciones." >&2
+if [[ $sin_clave == 1 ]]; then
+  unset YUMA_PANEL_CLAVE
+  echo "Aviso: la consola queda sin contraseña; quien tenga la dirección del túnel puede ver y resolver casos." >&2
+fi
+if [[ $tunel == 1 && ( -z "${YUMA_PANEL_TOKEN:-}" || ( $sin_clave == 0 && -z "${YUMA_PANEL_CLAVE:-}" ) ) ]]; then
+  echo "Con --tunel define YUMA_PANEL_TOKEN y YUMA_PANEL_CLAVE (o usa --sin-clave): sin ellas cualquiera podría liberar operaciones." >&2
   exit 1
 fi
 
